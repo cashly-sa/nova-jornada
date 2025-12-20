@@ -8,6 +8,7 @@ import { JourneyProgress } from '@/components/JourneyProgress'
 import { useJourneyStore } from '@/store/journey.store'
 import { validateIMEI, formatIMEI } from '@/utils/validators'
 import { SessionGuard } from '@/components/SessionGuard'
+import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 
 const steps = [
   {
@@ -47,6 +48,10 @@ function KnoxPageContent() {
   const [imei, setImei] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isCompleted, setIsCompleted] = useState(false)
+
+  // Rastrear abandono
+  useAbandonmentTracker(journeyId, 'knox', isCompleted)
 
   const handleImeiChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatIMEI(e.target.value)
@@ -68,6 +73,7 @@ function KnoxPageContent() {
     await new Promise(resolve => setTimeout(resolve, 1500))
 
     // Salvar IMEI
+    setIsCompleted(true)
     setKnoxImei(imei)
     setStep('contrato')
     router.push('/credito/contrato')

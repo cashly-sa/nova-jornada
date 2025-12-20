@@ -8,6 +8,7 @@ import { JourneyProgress } from '@/components/JourneyProgress'
 import { useJourneyStore } from '@/store/journey.store'
 import { formatCurrency } from '@/utils/validators'
 import { SessionGuard } from '@/components/SessionGuard'
+import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 
 export default function ContratoPage() {
   return (
@@ -23,6 +24,10 @@ function ContratoPageContent() {
 
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isCompleted, setIsCompleted] = useState(false)
+
+  // Rastrear abandono
+  useAbandonmentTracker(journeyId, 'contrato', isCompleted)
 
   const handleSign = async () => {
     if (!acceptedTerms) return
@@ -36,6 +41,7 @@ function ContratoPageContent() {
     const contratoId = `CTR-${Date.now()}`
     setContratoId(contratoId)
 
+    setIsCompleted(true)
     setStep('sucesso')
     router.push('/credito/sucesso')
 

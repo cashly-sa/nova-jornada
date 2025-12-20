@@ -8,6 +8,7 @@ import { JourneyProgress } from '@/components/JourneyProgress'
 import { useJourneyStore } from '@/store/journey.store'
 import { formatCurrency } from '@/utils/validators'
 import { SessionGuard } from '@/components/SessionGuard'
+import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 
 export default function OfertaPage() {
   return (
@@ -22,6 +23,10 @@ function OfertaPageContent() {
   const { journeyId, valorAprovado, deviceInfo, setStep } = useJourneyStore()
 
   const [isLoading, setIsLoading] = useState(false)
+  const [isCompleted, setIsCompleted] = useState(false)
+
+  // Rastrear abandono
+  useAbandonmentTracker(journeyId, 'oferta', isCompleted)
 
   const handleAccept = async () => {
     setIsLoading(true)
@@ -29,6 +34,7 @@ function OfertaPageContent() {
     // Simular processamento
     await new Promise(resolve => setTimeout(resolve, 1000))
 
+    setIsCompleted(true)
     setStep('knox')
     router.push('/credito/knox')
   }

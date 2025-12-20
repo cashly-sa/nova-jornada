@@ -7,6 +7,7 @@ import { CashlyLogo } from '@/components/CashlyLogo'
 import { JourneyProgress } from '@/components/JourneyProgress'
 import { useJourneyStore } from '@/store/journey.store'
 import { SessionGuard } from '@/components/SessionGuard'
+import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 
 // Logo Uber (SVG inline)
 function UberLogo({ className }: { className?: string }) {
@@ -44,6 +45,10 @@ function RendaPageContent() {
   const [plataforma, setPlataforma] = useState<'uber' | '99' | ''>('')
   const [isLoading, setIsLoading] = useState(false)
   const [status, setStatus] = useState<'form' | 'processing' | 'done'>('form')
+  const [isCompleted, setIsCompleted] = useState(false)
+
+  // Rastrear abandono
+  useAbandonmentTracker(journeyId, 'renda', isCompleted)
 
   const handleSelect = async (selected: 'uber' | '99') => {
     setPlataforma(selected)
@@ -76,6 +81,7 @@ function RendaPageContent() {
 
     // Ir para oferta após breve delay
     setTimeout(() => {
+      setIsCompleted(true)
       setStep('oferta')
       router.push('/credito/oferta')
     }, 1500)
