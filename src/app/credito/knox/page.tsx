@@ -9,6 +9,8 @@ import { useJourneyStore } from '@/store/journey.store'
 import { validateIMEI, formatIMEI } from '@/utils/validators'
 import { SessionGuard } from '@/components/SessionGuard'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
+import { useEventTracker } from '@/hooks/useEventTracker'
+import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 
 const steps = [
   {
@@ -50,7 +52,9 @@ function KnoxPageContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
 
-  // Rastrear abandono
+  // Hooks de tracking
+  const { logEvent, trackClick, trackInputFocus, trackFormError, trackLinkClick, trackStepCompleted } = useEventTracker('knox')
+  useVisibilityTracker('knox')
   useAbandonmentTracker(journeyId, 'knox', isCompleted)
 
   const handleImeiChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,20 +63,52 @@ function KnoxPageContent() {
     setError('')
   }
 
+  const handleImeiBlur = () => {
+    if (imei.length === 15) {
+      logEvent('knox_imei_entered', { imei_length: imei.length })
+    }
+  }
+
+  const handlePlayStoreClick = () => {
+    trackLinkClick('https://play.google.com/store/apps/details?id=com.samsung.android.knox.kpu')
+    logEvent('knox_playstore_clicked')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!validateIMEI(imei)) {
       setError('IMEI inválido. Deve ter 15 dígitos.')
+      trackFormError('imei', 'IMEI inválido')
       return
     }
 
+    trackClick('submit_imei', 'Confirmar IMEI')
     setIsLoading(true)
 
     // Simular validação (em produção, seria API do Knox)
     await new Promise(resolve => setTimeout(resolve, 1500))
 
-    // Salvar IMEI
+    // Logar verificação do IMEI
+    logEvent('knox_verified', { imei })
+    trackStepCompleted()
+
+    // Atualizar step no banco
+    try {
+      await fetch('/api/journey/step', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          journeyId,
+          step: 'contrato',
+          eventType: 'knox_verified'
+        })
+      })
+    } catch (err) {
+      console.error('Erro ao atualizar step:', err)
+    }
+
+    // Salvar IMEI e navegar
     setIsCompleted(true)
     setKnoxImei(imei)
     setStep('contrato')
@@ -129,6 +165,7 @@ function KnoxPageContent() {
               href="https://play.google.com/store/apps/details?id=com.samsung.android.knox.kpu"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handlePlayStoreClick}
               className="block mb-6"
             >
               <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-primary/30 bg-primary/5 hover:bg-primary/10 transition-colors">
@@ -154,6 +191,8 @@ function KnoxPageContent() {
                 placeholder="Digite o IMEI (15 dígitos)"
                 value={imei}
                 onChange={handleImeiChange}
+                onFocus={() => trackInputFocus('imei')}
+                onBlur={handleImeiBlur}
                 className={`input-field ${error ? 'border-error' : ''}`}
                 maxLength={15}
               />

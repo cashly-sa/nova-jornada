@@ -1,7 +1,7 @@
 # Arquitetura - Jornada de Crédito Cashly
 
-> **Versão:** 1.0  
-> **Data:** Dezembro 2024  
+> **Versão:** 1.2
+> **Data:** Dezembro 2024
 > **Status:** Aprovado para desenvolvimento
 
 ---
@@ -392,6 +392,139 @@ Jornada 100% web, contínua e sem fricção:
 | Validação no backend | Nunca confiar apenas no estado do frontend |
 | Spinner durante verificação | Evita flash de tela de CPF antes de redirecionar |
 
+### 4.5 Sistema de Idempotência (Implementado)
+
+**Problema Resolvido:** Usuários com conexão instável (motoristas Uber/99) causavam:
+- Double-click criava OTPs duplicados
+- Refresh na página de device sobrescrevia validação anterior
+- Race conditions entre SELECT e UPDATE no OTP
+- Erros silenciosos nas páginas de renda e oferta
+
+**Contexto:** Motoristas de app frequentemente têm conexão instável (3G/4G oscilante), causando:
+- Requisições duplicadas por timeout/retry do navegador
+- Cliques múltiplos por latência de resposta
+- Estado inconsistente entre frontend e backend
+
+**Soluções Implementadas:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    PADRÕES DE IDEMPOTÊNCIA                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. FUNÇÃO ATÔMICA PostgreSQL (OTP)                                        │
+│  ───────────────────────────────────                                        │
+│                                                                             │
+│  ANTES (3 queries separadas - race condition):                             │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐            │
+│  │ SELECT otp      │─►│ UPDATE otp      │─►│ UPDATE jornada  │            │
+│  │ WHERE used=false│  │ SET used=true   │  │ SET step='device│            │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘            │
+│         ▲                                                                   │
+│         │ Duas requisições simultâneas podiam passar!                      │
+│                                                                             │
+│  DEPOIS (função atômica com FOR UPDATE lock):                              │
+│  ┌─────────────────────────────────────────────────────────────────┐       │
+│  │  verify_otp_atomic(journey_id, code_hash)                       │       │
+│  │  • SELECT ... FOR UPDATE (lock exclusivo)                       │       │
+│  │  • Valida código e tentativas                                   │       │
+│  │  • UPDATE otp + UPDATE jornada + INSERT evento                  │       │
+│  │  • Tudo em uma transação                                        │       │
+│  └─────────────────────────────────────────────────────────────────┘       │
+│                                                                             │
+│  ─────────────────────────────────────────────────────────────────────     │
+│                                                                             │
+│  2. COMPARE-AND-SWAP (Device Validation)                                   │
+│  ───────────────────────────────────────                                    │
+│                                                                             │
+│  ANTES:                                                                     │
+│  supabase.update(data).eq('id', journeyId)  // Sempre sobrescreve          │
+│                                                                             │
+│  DEPOIS:                                                                    │
+│  // 1. Verifica se já foi validado                                         │
+│  if (existingJourney.device_checked_at) {                                  │
+│    return { ...resultado_anterior, alreadyChecked: true }                  │
+│  }                                                                          │
+│                                                                             │
+│  // 2. CAS: só atualiza se ainda não foi verificado                        │
+│  supabase.update(data)                                                      │
+│    .eq('id', journeyId)                                                     │
+│    .is('device_checked_at', null)  // ← Condição CAS                       │
+│                                                                             │
+│  ─────────────────────────────────────────────────────────────────────     │
+│                                                                             │
+│  3. ÍNDICE UNIQUE PARCIAL (OTP)                                            │
+│  ──────────────────────────────                                             │
+│                                                                             │
+│  CREATE UNIQUE INDEX idx_otp_codes_device_unused_unique                    │
+│  ON otp_codes(device_modelo_id)                                            │
+│  WHERE used = false;                                                        │
+│                                                                             │
+│  • Garante apenas 1 OTP não-usado por jornada                              │
+│  • Double-click em "Reenviar" não cria duplicatas                          │
+│  • Expiração verificada na função (NOW() não é IMMUTABLE para índice)      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Migration Criada:** `supabase/migrations/005_idempotency.sql`
+
+```sql
+-- Conteúdo principal:
+
+-- 1. Limpa OTPs duplicados existentes (mantém mais recente)
+UPDATE otp_codes o1 SET used = true
+WHERE used = false AND EXISTS (
+  SELECT 1 FROM otp_codes o2
+  WHERE o2.device_modelo_id = o1.device_modelo_id
+    AND o2.used = false AND o2.created_at > o1.created_at
+);
+
+-- 2. Índice UNIQUE para OTPs não-usados
+CREATE UNIQUE INDEX idx_otp_codes_device_unused_unique
+ON otp_codes(device_modelo_id) WHERE used = false;
+
+-- 3. Função atômica para verificar OTP
+CREATE FUNCTION verify_otp_atomic(p_journey_id BIGINT, p_code_hash TEXT)
+RETURNS JSON AS $$ ... $$;
+```
+
+**Arquivos Modificados:**
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/app/api/otp/verify/route.ts` | Usa `supabase.rpc('verify_otp_atomic')` em vez de 3 queries |
+| `src/app/api/device/validate/route.ts` | Adiciona verificação CAS com `.is('device_checked_at', null)` |
+| `src/app/credito/renda/page.tsx` | Adiciona try/catch + estado de erro + botão retry |
+| `src/app/credito/oferta/page.tsx` | Adiciona try/catch + mensagem de erro inline |
+
+**Tabela de Operações e Idempotência:**
+
+| Operação | Era Idempotente? | Agora | Solução |
+|----------|------------------|-------|---------|
+| `/api/otp/verify` | ❌ Race condition | ✅ | Função atômica PostgreSQL |
+| `/api/device/validate` | ❌ Sobrescrevia | ✅ | Compare-And-Swap |
+| OTP duplicados | ❌ Criava múltiplos | ✅ | Índice UNIQUE parcial |
+| Erro em renda/oferta | ❌ Sem feedback | ✅ | try/catch + UI de erro |
+
+**Decisões Técnicas:**
+
+| Decisão | Justificativa |
+|---------|---------------|
+| Função PostgreSQL (não código) | Atomicidade garantida pelo banco, não depende de transação do app |
+| FOR UPDATE lock | Previne leitura suja entre requisições concorrentes |
+| CAS com `.is(null)` | Mais simples que versioning, suficiente para nosso caso |
+| Índice parcial sem NOW() | NOW() não é IMMUTABLE, expiração verificada na função |
+| Retornar `alreadyChecked: true` | Frontend pode tratar retry como sucesso silencioso |
+
+**Validação:**
+
+- [x] Duplo clique em "Verificar OTP" não marca 2x como usado
+- [x] Refresh na página de device não sobrescreve validação anterior
+- [x] Erro na página de renda mostra mensagem clara + botão retry
+- [x] Erro na página de oferta mostra mensagem inline
+- [x] Apenas 1 OTP válido por jornada (índice funcionando)
+
 ---
 
 ## 5. Detecção de Device
@@ -608,6 +741,9 @@ SELECT * FROM v_journey_funnel;
 | Dez/24 | Não alterar tabela lead | Minimizar impacto em sistemas existentes |
 | Dez/24 | Client Hints API | Detecção de device mais precisa |
 | Dez/24 | Polling para RPA | Simplicidade vs WebSocket |
+| Dez/24 | Função atômica PostgreSQL para OTP | Garantir atomicidade no banco, não no código |
+| Dez/24 | CAS para device validation | Evitar sobrescrita em requisições duplicadas |
+| Dez/24 | Índice UNIQUE parcial sem NOW() | NOW() não é IMMUTABLE, expiração na função |
 
 ---
 
@@ -617,3 +753,4 @@ SELECT * FROM v_journey_funnel;
 |--------|------|------------|
 | 1.0 | Dez/24 | Versão inicial |
 | 1.1 | Dez/24 | Implementação do sistema de recuperação de sessão (seção 4.4) |
+| 1.2 | Dez/24 | Sistema de idempotência: função atômica OTP, CAS device, índice UNIQUE (seção 4.5) |

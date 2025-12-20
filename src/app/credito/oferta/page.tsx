@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { MobileOnly } from '@/components/MobileOnly'
 import { CashlyLogo } from '@/components/CashlyLogo'
@@ -9,6 +9,8 @@ import { useJourneyStore } from '@/store/journey.store'
 import { formatCurrency } from '@/utils/validators'
 import { SessionGuard } from '@/components/SessionGuard'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
+import { useEventTracker } from '@/hooks/useEventTracker'
+import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 
 export default function OfertaPage() {
   return (
@@ -23,24 +25,69 @@ function OfertaPageContent() {
   const { journeyId, valorAprovado, deviceInfo, setStep } = useJourneyStore()
 
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
   const [isCompleted, setIsCompleted] = useState(false)
+  const pageLoadTime = useRef<number>(Date.now())
 
-  // Rastrear abandono
+  // Hooks de tracking
+  const { logEvent, trackClick, trackStepCompleted } = useEventTracker('oferta')
+  useVisibilityTracker('oferta')
   useAbandonmentTracker(journeyId, 'oferta', isCompleted)
 
+  // Logar visualização da oferta
+  useEffect(() => {
+    logEvent('oferta_viewed', {
+      valor_aprovado: valorAprovado,
+      parcelas: 12,
+      taxa: 3.99
+    })
+  }, [logEvent, valorAprovado])
+
   const handleAccept = async () => {
-    setIsLoading(true)
+    const tempoDecisao = Math.round((Date.now() - pageLoadTime.current) / 1000)
 
-    // Simular processamento
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      trackClick('accept_offer', 'Aceitar oferta')
+      logEvent('oferta_accepted', { tempo_decisao_seconds: tempoDecisao })
 
-    setIsCompleted(true)
-    setStep('knox')
-    router.push('/credito/knox')
+      setIsLoading(true)
+      setError('')
+
+      // Atualizar step no banco
+      const response = await fetch('/api/journey/step', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          journeyId,
+          step: 'knox',
+          eventType: 'oferta_accepted'
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Falha ao processar aceite')
+      }
+
+      trackStepCompleted()
+      setIsCompleted(true)
+      setStep('knox')
+      router.push('/credito/knox')
+
+    } catch (err) {
+      console.error('Erro ao aceitar oferta:', err)
+      setError('Erro ao processar. Tente novamente.')
+      logEvent('oferta_error', { error: String(err) })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleReject = () => {
-    // Poderia registrar evento de rejeição
+    const tempoDecisao = Math.round((Date.now() - pageLoadTime.current) / 1000)
+
+    trackClick('reject_offer', 'Não tenho interesse')
+    logEvent('oferta_rejected', { tempo_decisao_seconds: tempoDecisao })
+
     router.push('/')
   }
 
@@ -103,6 +150,18 @@ function OfertaPageContent() {
                 </div>
               )}
             </div>
+
+            {/* Mensagem de erro */}
+            {error && (
+              <div className="mb-4 p-3 bg-error/10 border border-error/20 rounded-lg">
+                <p className="text-error text-sm text-center flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {error}
+                </p>
+              </div>
+            )}
 
             {/* Botões */}
             <div className="space-y-3">

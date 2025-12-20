@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, logJourneyEvent, checkDeviceEligibility } from '@/lib/supabase'
 
+/**
+ * Valida device de forma IDEMPOTENTE usando Compare-And-Swap.
+ * Se device_checked_at já estiver preenchido, retorna resultado anterior.
+ */
 export async function POST(request: NextRequest) {
   try {
     const { journeyId, modelo, fabricante, userAgent } = await request.json()
@@ -12,6 +16,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Primeiro, verificar se já foi validado (idempotência)
+    const { data: existingJourney, error: fetchError } = await supabase
+      .from('device_modelo')
+      .select('device_checked_at, modelo, valor_aprovado, "Aprovado CEL"')
+      .eq('id', journeyId)
+      .single()
+
+    if (fetchError) {
+      console.error('Erro ao buscar jornada:', fetchError)
+      return NextResponse.json(
+        { error: 'Jornada não encontrada' },
+        { status: 404 }
+      )
+    }
+
+    // Se já foi validado, retorna resultado anterior (idempotente)
+    if (existingJourney.device_checked_at) {
+      return NextResponse.json({
+        eligible: existingJourney['Aprovado CEL'],
+        valorAprovado: existingJourney.valor_aprovado,
+        modelo: existingJourney.modelo,
+        alreadyChecked: true,
+        message: 'Device já verificado anteriormente',
+      })
+    }
+
     // Verificar elegibilidade usando regex patterns
     const eligibilityResult = await checkDeviceEligibility(modelo, fabricante)
 
@@ -19,7 +49,8 @@ export async function POST(request: NextRequest) {
     const valorAprovado = eligibilityResult.valorAprovado || null
     const nomeComercial = eligibilityResult.nomeComercial || null
 
-    // Atualizar device_modelo com informações do dispositivo
+    // Atualizar device_modelo com CAS (Compare-And-Swap)
+    // Só atualiza se device_checked_at ainda for NULL
     const updateData: Record<string, unknown> = {
       modelo,
       fabricante,
@@ -37,10 +68,12 @@ export async function POST(request: NextRequest) {
       updateData.jornada_step = 'rejected'
     }
 
-    const { error: updateError } = await supabase
+    const { data: updateResult, error: updateError } = await supabase
       .from('device_modelo')
       .update(updateData)
       .eq('id', journeyId)
+      .is('device_checked_at', null)  // CAS: só atualiza se ainda não foi verificado
+      .select()
 
     if (updateError) {
       console.error('Erro ao atualizar device_modelo:', updateError)
@@ -50,7 +83,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Log do evento
+    // Se não atualizou nenhum registro, significa que foi verificado por outra requisição
+    if (!updateResult || updateResult.length === 0) {
+      // Buscar resultado atual e retornar
+      const { data: currentJourney } = await supabase
+        .from('device_modelo')
+        .select('modelo, valor_aprovado, "Aprovado CEL"')
+        .eq('id', journeyId)
+        .single()
+
+      return NextResponse.json({
+        eligible: currentJourney?.['Aprovado CEL'],
+        valorAprovado: currentJourney?.valor_aprovado,
+        modelo: currentJourney?.modelo,
+        alreadyChecked: true,
+        message: 'Device verificado por outra requisição',
+      })
+    }
+
+    // Log do evento (só se realmente atualizou)
     await logJourneyEvent(
       journeyId,
       eligible ? 'step_completed' : 'rejection',

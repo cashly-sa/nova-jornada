@@ -1,11 +1,14 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MobileOnly } from '@/components/MobileOnly'
 import { CashlyLogo } from '@/components/CashlyLogo'
 import { useJourneyStore } from '@/store/journey.store'
 import { formatCurrency } from '@/utils/validators'
 import { SessionGuard } from '@/components/SessionGuard'
+import { useEventTracker } from '@/hooks/useEventTracker'
+import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 
 export default function SucessoPage() {
   return (
@@ -19,9 +22,27 @@ function SucessoPageContent() {
   const router = useRouter()
   const { valorAprovado, contratoId, leadData, reset } = useJourneyStore()
 
+  // Hooks de tracking
+  const { logEvent, trackClick, trackLinkClick } = useEventTracker('sucesso')
+  useVisibilityTracker('sucesso')
+
+  // Logar conclusão da jornada
+  useEffect(() => {
+    logEvent('journey_completed', {
+      valor_aprovado: valorAprovado,
+      contrato_id: contratoId
+    })
+  }, [logEvent, valorAprovado, contratoId])
+
   const handleNewJourney = () => {
+    trackClick('new_journey', 'Voltar ao início')
     reset()
     router.push('/')
+  }
+
+  const handleDownloadApp = () => {
+    trackLinkClick('app_download')
+    logEvent('app_download_clicked')
   }
 
   return (
@@ -109,6 +130,7 @@ function SucessoPageContent() {
             {/* Download app */}
             <a
               href="#"
+              onClick={handleDownloadApp}
               className="block mb-4"
             >
               <div className="flex items-center justify-center gap-3 p-4 rounded-xl border-2 border-gray-200 hover:border-primary/30 transition-colors">

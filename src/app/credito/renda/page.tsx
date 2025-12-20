@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { MobileOnly } from '@/components/MobileOnly'
 import { CashlyLogo } from '@/components/CashlyLogo'
@@ -8,24 +8,34 @@ import { JourneyProgress } from '@/components/JourneyProgress'
 import { useJourneyStore } from '@/store/journey.store'
 import { SessionGuard } from '@/components/SessionGuard'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
+import { useEventTracker } from '@/hooks/useEventTracker'
+import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 
-// Logo Uber (SVG inline)
-function UberLogo({ className }: { className?: string }) {
+// Logo Uber (wordmark oficial)
+function UberLogo({ color = 'black' }: { color?: 'black' | 'white' }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-      <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/>
-      <text x="8" y="15" fontSize="8" fontWeight="bold" fontFamily="Arial">U</text>
+    <svg viewBox="0 0 93 29" fill={color} className="w-16 h-auto">
+      <path d="M11.4 23.1C5 23.1 0 18.3 0 11.6V0h4.8v11.3c0 4 2.7 7 6.6 7 4 0 6.7-3 6.7-7V0h4.8v11.6c0 6.7-5.1 11.5-11.5 11.5zm61.3-.2h-5l-9.2-9.8v9.8h-4.8V.5h4.8v9.3l9-9.3h5.5l-10 10.2 9.7 12.2zm-30.2 0V.5h15.3v4.1h-10.5v5h10.2v4.1h-10.2v5h10.5v4.2H42.5zm-18.8 0V.5h10c3.7 0 6.3 2.5 6.3 5.9 0 2.4-1.2 4.2-3.2 5.1 2.3.8 3.8 2.8 3.8 5.4 0 3.7-2.8 6-6.6 6H23.7zm5.8-13.7h3.7c1.4 0 2.3-.9 2.3-2.2 0-1.3-.9-2.2-2.3-2.2h-3.7v4.4zm0 9.4h4c1.6 0 2.6-1 2.6-2.4 0-1.4-1-2.4-2.6-2.4h-4v4.8z"/>
     </svg>
   )
 }
 
-// Logo 99 (SVG inline)
-function Logo99({ className }: { className?: string }) {
+// Logo 99 (circular amarelo oficial)
+function Logo99({ inverted = false }: { inverted?: boolean }) {
   return (
-    <svg className={className} viewBox="0 0 100 100" fill="currentColor">
-      <circle cx="50" cy="50" r="48" fill="#FFCC00"/>
-      <text x="50" y="62" textAnchor="middle" fontSize="40" fontWeight="bold" fontFamily="Arial" fill="#000">99</text>
+    <svg viewBox="0 0 100 100" className="w-16 h-16">
+      <circle cx="50" cy="50" r="50" fill={inverted ? '#000' : '#FFCC00'}/>
+      <text
+        x="50"
+        y="65"
+        textAnchor="middle"
+        fontSize="45"
+        fontWeight="bold"
+        fontFamily="Arial, sans-serif"
+        fill={inverted ? '#FFCC00' : '#000'}
+      >
+        99
+      </text>
     </svg>
   )
 }
@@ -44,49 +54,90 @@ function RendaPageContent() {
 
   const [plataforma, setPlataforma] = useState<'uber' | '99' | ''>('')
   const [isLoading, setIsLoading] = useState(false)
-  const [status, setStatus] = useState<'form' | 'processing' | 'done'>('form')
+  const [status, setStatus] = useState<'form' | 'processing' | 'done' | 'error'>('form')
+  const [error, setError] = useState('')
   const [isCompleted, setIsCompleted] = useState(false)
 
-  // Rastrear abandono
+  // Hooks de tracking
+  const { logEvent, trackClick, trackStepCompleted } = useEventTracker('renda')
+  useVisibilityTracker('renda')
   useAbandonmentTracker(journeyId, 'renda', isCompleted)
 
   const handleSelect = async (selected: 'uber' | '99') => {
-    setPlataforma(selected)
-    setIsLoading(true)
-    setStatus('processing')
+    try {
+      // Logar seleção de plataforma
+      trackClick(`select_${selected}`, selected === 'uber' ? 'Uber' : '99')
+      logEvent('platform_selected', { platform: selected })
 
-    // Simular processamento (MOCK)
-    await new Promise(resolve => setTimeout(resolve, 2000))
+      setPlataforma(selected)
+      setIsLoading(true)
+      setStatus('processing')
+      setError('')
 
-    // Mock de dados de renda
-    const mockRendaInfo = {
-      plataforma: selected,
-      dados_uber: selected === 'uber' ? {
-        ativo: true,
-        corridas_mes: 150,
-        faturamento_medio: 4500,
-        avaliacao: 4.85,
-      } : undefined,
-      dados_99: selected === '99' ? {
-        ativo: true,
-        corridas_mes: 120,
-        faturamento_medio: 3800,
-        avaliacao: 4.9,
-      } : undefined,
-      score: 750,
+      // Simular processamento (MOCK)
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      // Mock de dados de renda
+      const mockRendaInfo = {
+        plataforma: selected,
+        dados_uber: selected === 'uber' ? {
+          ativo: true,
+          corridas_mes: 150,
+          faturamento_medio: 4500,
+          avaliacao: 4.85,
+        } : undefined,
+        dados_99: selected === '99' ? {
+          ativo: true,
+          corridas_mes: 120,
+          faturamento_medio: 3800,
+          avaliacao: 4.9,
+        } : undefined,
+        score: 750,
+      }
+
+      setRendaInfo(mockRendaInfo)
+      setStatus('done')
+
+      // Logar validação de renda
+      logEvent('renda_validated', { platform: selected, score: 750 })
+      trackStepCompleted()
+
+      // Atualizar step no banco
+      try {
+        await fetch('/api/journey/step', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            journeyId,
+            step: 'oferta',
+            eventType: 'renda_validated'
+          })
+        })
+      } catch (err) {
+        console.error('Erro ao atualizar step:', err)
+      }
+
+      // Ir para oferta após breve delay
+      setTimeout(() => {
+        setIsCompleted(true)
+        setStep('oferta')
+        router.push('/credito/oferta')
+      }, 1500)
+
+    } catch (err) {
+      console.error('Erro ao validar renda:', err)
+      setError('Erro ao validar sua renda. Tente novamente.')
+      setStatus('error')
+      logEvent('renda_error', { platform: selected, error: String(err) })
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    setRendaInfo(mockRendaInfo)
-    setStatus('done')
-
-    // Ir para oferta após breve delay
-    setTimeout(() => {
-      setIsCompleted(true)
-      setStep('oferta')
-      router.push('/credito/oferta')
-    }, 1500)
-
-    setIsLoading(false)
+  const handleRetry = () => {
+    setStatus('form')
+    setError('')
+    setPlataforma('')
   }
 
   return (
@@ -128,9 +179,7 @@ function RendaPageContent() {
                   `}
                 >
                   <div className="w-20 h-20 mb-3 flex items-center justify-center">
-                    <svg viewBox="0 0 24 24" className="w-16 h-16" fill={plataforma === 'uber' ? 'white' : 'black'}>
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.66-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.49 1.02-.75 3.98-1.73 6.64-2.87 7.97-3.43 3.8-1.57 4.59-1.84 5.1-1.85.11 0 .37.03.54.17.14.12.18.28.2.45-.01.06.01.24 0 .37z"/>
-                    </svg>
+                    <UberLogo color={plataforma === 'uber' ? 'white' : 'black'} />
                   </div>
                   <span className={`text-xl font-bold ${plataforma === 'uber' ? 'text-white' : 'text-black'}`}>
                     Uber
@@ -150,11 +199,7 @@ function RendaPageContent() {
                   `}
                 >
                   <div className="w-20 h-20 mb-3 flex items-center justify-center">
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center ${plataforma === '99' ? 'bg-black' : 'bg-[#FFCC00]'}`}>
-                      <span className={`text-2xl font-black ${plataforma === '99' ? 'text-[#FFCC00]' : 'text-black'}`}>
-                        99
-                      </span>
-                    </div>
+                    <Logo99 inverted={plataforma === '99'} />
                   </div>
                   <span className="text-xl font-bold text-black">
                     99
@@ -192,6 +237,24 @@ function RendaPageContent() {
               </div>
               <h1 className="page-title text-success">Renda validada!</h1>
               <p className="text-text-secondary">Preparando sua oferta...</p>
+            </div>
+          )}
+
+          {status === 'error' && (
+            <div className="card animate-slide-up text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-error/10 flex items-center justify-center">
+                <svg className="w-10 h-10 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h1 className="page-title text-error">Erro na validação</h1>
+              <p className="text-text-secondary mb-6">{error}</p>
+              <button
+                onClick={handleRetry}
+                className="btn-primary"
+              >
+                Tentar novamente
+              </button>
             </div>
           )}
         </div>

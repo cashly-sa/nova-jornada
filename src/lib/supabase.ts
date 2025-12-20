@@ -167,10 +167,29 @@ export async function updateJourneyStep(
   }
 }
 
+/**
+ * Tipos de evento suportados para tracking comportamental
+ *
+ * Sessão: session_started, session_resumed, session_expired
+ * Navegação: step_entered, step_completed, step_abandoned, step_back
+ * Interação: button_clicked, link_clicked, input_focused, input_filled, form_error, checkbox_toggled
+ * CPF: cpf_entered, cpf_valid, cpf_invalid, cpf_blacklisted
+ * OTP: otp_requested, otp_resent, otp_digit_entered, otp_verified, otp_failed
+ * Device: device_detected, device_eligible, device_ineligible
+ * Renda: platform_selected, renda_validated
+ * Oferta: oferta_viewed, oferta_accepted, oferta_rejected
+ * Knox: knox_playstore_clicked, knox_imei_entered, knox_verified
+ * Contrato: contrato_viewed, contrato_scrolled, contrato_terms_accepted, contrato_signed
+ * Sucesso: journey_completed, mgm_code_copied, app_download_clicked
+ * Mobile: app_backgrounded, app_foregrounded
+ * Técnico: api_error, network_error
+ */
+export type JourneyEventType = string // Aceita qualquer string para flexibilidade
+
 // Log de evento da jornada (analytics)
 export async function logJourneyEvent(
   deviceModeloId: number,
-  eventType: 'step_started' | 'step_completed' | 'error' | 'rejection' | 'journey_abandoned' | 'otp_verified',
+  eventType: JourneyEventType,
   stepName: string,
   metadata?: Record<string, unknown>
 ) {

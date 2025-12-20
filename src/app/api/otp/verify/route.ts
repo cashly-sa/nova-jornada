@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { hashOTPCode } from '@/lib/clicksend'
 
+/**
+ * Verifica código OTP de forma ATÔMICA usando função PostgreSQL.
+ * Isso resolve race conditions de double-click e garante consistência.
+ */
 export async function POST(request: NextRequest) {
   try {
     const { journeyId, code } = await request.json()
@@ -13,86 +17,53 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Buscar OTP válido mais recente
-    const { data: otpRecord, error: fetchError } = await supabase
-      .from('otp_codes')
-      .select('*')
-      .eq('device_modelo_id', journeyId)
-      .eq('used', false)
-      .gt('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
-    if (fetchError || !otpRecord) {
-      return NextResponse.json(
-        { error: 'Código expirado ou não encontrado' },
-        { status: 400 }
-      )
-    }
-
-    // Verificar tentativas
-    if (otpRecord.attempts >= 3) {
-      return NextResponse.json(
-        { error: 'Muitas tentativas. Solicite um novo código.' },
-        { status: 429 }
-      )
-    }
-
-    // Verificar código
+    // Hash do código para comparação
     const codeHash = await hashOTPCode(code)
-    const isValid = codeHash === otpRecord.code_hash
 
-    if (!isValid) {
-      // Incrementar tentativas
-      await supabase
-        .from('otp_codes')
-        .update({ attempts: otpRecord.attempts + 1 })
-        .eq('id', otpRecord.id)
+    // Chamar função atômica do PostgreSQL
+    // Esta função faz SELECT + UPDATE + INSERT em uma única transação com lock
+    const { data, error } = await supabase.rpc('verify_otp_atomic', {
+      p_journey_id: journeyId,
+      p_code_hash: codeHash,
+    })
 
-      // Log do evento
-      await supabase
-        .from('journey_events')
-        .insert({
-          device_modelo_id: journeyId,
-          event_type: 'otp_failed',
-          step_name: 'otp',
-          metadata: { attempts: otpRecord.attempts + 1 },
-        })
-
+    if (error) {
+      console.error('Erro na função verify_otp_atomic:', error)
       return NextResponse.json(
-        { error: 'Código inválido' },
-        { status: 400 }
+        { error: 'Erro interno ao verificar código' },
+        { status: 500 }
       )
     }
 
-    // Marcar OTP como usado
-    await supabase
-      .from('otp_codes')
-      .update({ used: true })
-      .eq('id', otpRecord.id)
+    // Tratar resultado da função
+    const result = data as {
+      success: boolean
+      error?: string
+      message: string
+      attempts?: number
+    }
 
-    // Atualizar jornada
-    await supabase
-      .from('device_modelo')
-      .update({
-        jornada_step: 'device',
-        otp_verified_at: new Date().toISOString(),
-      })
-      .eq('id', journeyId)
+    if (!result.success) {
+      // Mapear erros para status HTTP apropriados
+      const statusMap: Record<string, number> = {
+        not_found: 400,
+        too_many_attempts: 429,
+        invalid_code: 400,
+        internal_error: 500,
+      }
 
-    // Log do evento
-    await supabase
-      .from('journey_events')
-      .insert({
-        device_modelo_id: journeyId,
-        event_type: 'otp_verified',
-        step_name: 'otp',
-      })
+      return NextResponse.json(
+        {
+          error: result.message,
+          attempts: result.attempts,
+        },
+        { status: statusMap[result.error || 'internal_error'] || 400 }
+      )
+    }
 
     return NextResponse.json({
       success: true,
-      message: 'Código verificado com sucesso',
+      message: result.message,
     })
 
   } catch (error) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { MobileOnly } from '@/components/MobileOnly'
 import { CashlyLogo } from '@/components/CashlyLogo'
@@ -9,6 +9,8 @@ import { useJourneyStore } from '@/store/journey.store'
 import { formatCurrency } from '@/utils/validators'
 import { SessionGuard } from '@/components/SessionGuard'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
+import { useEventTracker } from '@/hooks/useEventTracker'
+import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 
 export default function ContratoPage() {
   return (
@@ -25,13 +27,47 @@ function ContratoPageContent() {
   const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isCompleted, setIsCompleted] = useState(false)
+  const [hasScrolled, setHasScrolled] = useState(false)
+  const termsRef = useRef<HTMLDivElement>(null)
 
-  // Rastrear abandono
+  // Hooks de tracking
+  const { logEvent, trackClick, trackCheckbox, trackStepCompleted } = useEventTracker('contrato')
+  useVisibilityTracker('contrato')
   useAbandonmentTracker(journeyId, 'contrato', isCompleted)
+
+  // Logar visualização do contrato
+  useEffect(() => {
+    logEvent('contrato_viewed', { valor_aprovado: valorAprovado })
+  }, [logEvent, valorAprovado])
+
+  // Detectar scroll no contrato
+  useEffect(() => {
+    const termsEl = termsRef.current
+    if (!termsEl) return
+
+    const handleScroll = () => {
+      if (!hasScrolled) {
+        setHasScrolled(true)
+        logEvent('contrato_scrolled')
+      }
+    }
+
+    termsEl.addEventListener('scroll', handleScroll)
+    return () => termsEl.removeEventListener('scroll', handleScroll)
+  }, [hasScrolled, logEvent])
+
+  const handleTermsChange = (checked: boolean) => {
+    setAcceptedTerms(checked)
+    trackCheckbox('accept_terms', checked)
+    if (checked) {
+      logEvent('contrato_terms_accepted')
+    }
+  }
 
   const handleSign = async () => {
     if (!acceptedTerms) return
 
+    trackClick('sign_contract', 'Assinar contrato')
     setIsLoading(true)
 
     // Simular geração e assinatura do contrato
@@ -40,6 +76,25 @@ function ContratoPageContent() {
     // Gerar ID do contrato (em produção seria da API)
     const contratoId = `CTR-${Date.now()}`
     setContratoId(contratoId)
+
+    // Logar assinatura
+    logEvent('contrato_signed', { contrato_id: contratoId })
+    trackStepCompleted()
+
+    // Atualizar step no banco
+    try {
+      await fetch('/api/journey/step', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          journeyId,
+          step: 'sucesso',
+          eventType: 'contrato_signed'
+        })
+      })
+    } catch (err) {
+      console.error('Erro ao atualizar step:', err)
+    }
 
     setIsCompleted(true)
     setStep('sucesso')
@@ -106,7 +161,10 @@ function ContratoPageContent() {
             </div>
 
             {/* Termos */}
-            <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4 h-40 overflow-y-auto text-xs text-text-secondary">
+            <div
+              ref={termsRef}
+              className="bg-white border border-gray-200 rounded-xl p-4 mb-4 h-40 overflow-y-auto text-xs text-text-secondary"
+            >
               <h3 className="font-bold text-text-primary mb-2">TERMOS E CONDIÇÕES</h3>
               <p className="mb-2">
                 Este contrato estabelece os termos e condições do empréstimo pessoal
@@ -141,7 +199,7 @@ function ContratoPageContent() {
               <input
                 type="checkbox"
                 checked={acceptedTerms}
-                onChange={(e) => setAcceptedTerms(e.target.checked)}
+                onChange={(e) => handleTermsChange(e.target.checked)}
                 className="mt-1 w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
               />
               <span className="text-sm text-text-secondary">
