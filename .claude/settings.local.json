@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "Bash(findstr:*)",
+      "Bash(if not exist \"c:\\\\Users\\\\Alexandre Abreu\\\\OneDrive\\\\Cashly\\\\12 - GITHUB\\\\Nova Jornada\\\\public\" mkdir \"c:\\\\Users\\\\Alexandre Abreu\\\\OneDrive\\\\Cashly\\\\12 - GITHUB\\\\Nova Jornada\\\\public\")",
+      "Bash(copy \"c:\\\\Users\\\\Alexandre Abreu\\\\OneDrive\\\\Cashly\\\\12 - GITHUB\\\\Nova Jornada\\\\jornada_antiga\\\\public\\\\logo_cashly.png\" \"c:\\\\Users\\\\Alexandre Abreu\\\\OneDrive\\\\Cashly\\\\12 - GITHUB\\\\Nova Jornada\\\\public\"\")",
+      "Bash(npm install:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm run dev:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)",
+      "Bash(node -e \"\nconst { createClient } = require\\(''@supabase/supabase-js''\\);\nconst supabase = createClient\\(\n  ''https://datalake.cashly.com.br'',\n  ''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICJyb2xlIjogImFub24iLAogICJpc3MiOiAic3VwYWJhc2UiLAogICJpYXQiOiAxNzI3OTI0NDAwLAogICJleHAiOiAxODg1NjkwODAwCn0.l6dhuDeAu9qg7mvocRfBqKGHoksn2H6kqSqlGqSKAsA''\n\\);\n\nasync function test\\(\\) {\n  const { data, error } = await supabase\n    .from\\(''lead''\\)\n    .select\\(''id, telefone''\\)\n    .eq\\(''cpf'', ''28625571883''\\)\n    .single\\(\\);\n  \n  console.log\\(''Resultado:'', JSON.stringify\\({ data, error }, null, 2\\)\\);\n}\n\ntest\\(\\);\n\")",
+      "Bash(node -e \"\nconst { createClient } = require\\(''@supabase/supabase-js''\\);\nconst supabase = createClient\\(\n  ''https://datalake.cashly.com.br'',\n  ''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICJyb2xlIjogImFub24iLAogICJpc3MiOiAic3VwYWJhc2UiLAogICJpYXQiOiAxNzI3OTI0NDAwLAogICJleHAiOiAxODg1NjkwODAwCn0.l6dhuDeAu9qg7mvocRfBqKGHoksn2H6kqSqlGqSKAsA''\n\\);\n\nasync function test\\(\\) {\n  const { data, error } = await supabase\n    .from\\(''lead''\\)\n    .select\\(''id, telefone, Blacklist''\\)\n    .eq\\(''cpf'', ''28625571883''\\)\n    .single\\(\\);\n  \n  console.log\\(''Resultado:'', JSON.stringify\\({ data, error }, null, 2\\)\\);\n}\n\ntest\\(\\);\n\")",
+      "Bash(node -e \"\nconst { createClient } = require\\(''@supabase/supabase-js''\\);\nconst supabase = createClient\\(\n  ''https://datalake.cashly.com.br'',\n  ''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ewogICJyb2xlIjogImFub24iLAogICJpc3MiOiAic3VwYWJhc2UiLAogICJpYXQiOiAxNzI3OTI0NDAwLAogICJleHAiOiAxODg1NjkwODAwCn0.l6dhuDeAu9qg7mvocRfBqKGHoksn2H6kqSqlGqSKAsA''\n\\);\n\nasync function testFlow\\(\\) {\n  console.log\\(''1. Verificando CPF...''\\);\n  const { data: lead, error: leadError } = await supabase\n    .from\\(''lead''\\)\n    .select\\(''id, telefone, Blacklist''\\)\n    .eq\\(''cpf'', ''28625571883''\\)\n    .single\\(\\);\n  \n  if \\(leadError\\) {\n    console.log\\(''Erro ao buscar lead:'', leadError\\);\n    return;\n  }\n  \n  console.log\\(''Lead encontrado:'', lead\\);\n  \n  if \\(lead.Blacklist\\) {\n    console.log\\(''Lead na blacklist!''\\);\n    return;\n  }\n  \n  console.log\\(''\\\\n2. Criando jornada \\(device_modelo\\)...''\\);\n  const { data: journey, error: journeyError } = await supabase\n    .from\\(''device_modelo''\\)\n    .insert\\({\n      lead_id: lead.id,\n      jornada_step: ''otp'',\n      status: ''in_progress'',\n    }\\)\n    .select\\(''id, token''\\)\n    .single\\(\\);\n  \n  if \\(journeyError\\) {\n    console.log\\(''Erro ao criar jornada:'', journeyError\\);\n    return;\n  }\n  \n  console.log\\(''Jornada criada:'', journey\\);\n  console.log\\(''\\\\n3. Proximo passo: /credito/otp com token:'', journey.token\\);\n}\n\ntestFlow\\(\\);\n\")",
+      "Bash(node:*)",
+      "Bash(tasklist:*)",
+      "Bash(timeout /t 5 /nobreak)",
+      "Bash(if not exist \"c:\\\\Users\\\\Alexandre Abreu\\\\OneDrive\\\\Cashly\\\\12 - GITHUB\\\\Nova Jornada\\\\src\\\\app\\\\api\\\\journey\" mkdir \"c:\\\\Users\\\\Alexandre Abreu\\\\OneDrive\\\\Cashly\\\\12 - GITHUB\\\\Nova Jornada\\\\src\\\\app\\\\api\\\\journey\")",
+      "Bash(npm run build:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)"
+    ]
+  }
+}

@@ -1,0 +1,190 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset e base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  background-color: #F5F7FA;
+  color: #1A1A2E;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Variáveis CSS customizadas */
+:root {
+  --primary: #00C853;
+  --primary-gradient: linear-gradient(135deg, #00C853 0%, #1DE9B6 100%);
+  --secondary: #2962FF;
+  --secondary-gradient: linear-gradient(135deg, #2962FF 0%, #448AFF 100%);
+  --success: #00C853;
+  --error: #FF5252;
+  --warning: #FFB300;
+  --background: #F5F7FA;
+  --card: #FFFFFF;
+  --text-primary: #1A1A2E;
+  --text-secondary: #6B7280;
+  --border: #E5E7EB;
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+}
+
+/* Classes utilitárias */
+@layer components {
+  /* Container mobile-first */
+  .container-mobile {
+    @apply w-full max-w-md mx-auto px-4 py-6;
+  }
+
+  /* Card padrão */
+  .card {
+    @apply bg-white rounded-xl p-6 shadow-soft;
+  }
+
+  /* Botão primário grande */
+  .btn-primary {
+    @apply w-full min-h-[56px] px-6 py-4
+           bg-gradient-to-r from-primary to-[#1DE9B6]
+           text-white font-semibold text-lg
+           rounded-xl shadow-soft
+           transition-all duration-200
+           hover:shadow-medium hover:scale-[1.02]
+           active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+  }
+
+  /* Botão secundário */
+  .btn-secondary {
+    @apply w-full min-h-[56px] px-6 py-4
+           bg-white border-2 border-primary
+           text-primary font-semibold text-lg
+           rounded-xl shadow-soft
+           transition-all duration-200
+           hover:bg-primary-50
+           active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Input padrão */
+  .input-field {
+    @apply w-full min-h-[56px] px-4 py-3
+           bg-white border-2 border-gray-200
+           text-text-primary text-lg
+           rounded-xl
+           transition-all duration-200
+           placeholder:text-text-secondary
+           focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20
+           disabled:bg-gray-100 disabled:cursor-not-allowed;
+  }
+
+  /* Label */
+  .label {
+    @apply block text-sm font-medium text-text-secondary mb-2;
+  }
+
+  /* Mensagem de erro */
+  .error-message {
+    @apply text-sm text-error mt-1 flex items-center gap-1;
+  }
+
+  /* Título da página */
+  .page-title {
+    @apply text-2xl font-bold text-text-primary mb-2;
+  }
+
+  /* Subtítulo */
+  .page-subtitle {
+    @apply text-base text-text-secondary mb-6;
+  }
+
+  /* Progress bar container */
+  .progress-container {
+    @apply w-full bg-gray-200 rounded-full h-2 mb-6 overflow-hidden;
+  }
+
+  /* Progress bar fill */
+  .progress-fill {
+    @apply h-full bg-gradient-to-r from-primary to-[#1DE9B6] rounded-full transition-all duration-500;
+  }
+}
+
+/* Animações */
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out forwards;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+}
+
+/* Skeleton loading */
+.skeleton {
+  @apply bg-gray-200 animate-pulse rounded;
+}
+
+/* Focus visible para acessibilidade */
+*:focus-visible {
+  @apply outline-2 outline-offset-2 outline-primary;
+}
+
+/* Remover spinners de input number */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+}

@@ -1,0 +1,116 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
+import { sendSMS, generateOTPCode, hashOTPCode } from '@/lib/clicksend'
+
+export async function POST(request: NextRequest) {
+  try {
+    const { journeyId, phone } = await request.json()
+
+    if (!journeyId || !phone) {
+      return NextResponse.json(
+        { error: 'journeyId e phone são obrigatórios' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar se já existe OTP válido (não usado e não expirado)
+    console.log('🔍 Verificando OTP existente para journeyId:', journeyId)
+    const { data: existingOtp, error: otpError } = await supabase
+      .from('otp_codes')
+      .select('id, expires_at')
+      .eq('device_modelo_id', journeyId)
+      .eq('used', false)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    console.log('📋 OTP encontrado:', existingOtp, 'Erro:', otpError?.code)
+
+    if (existingOtp) {
+      // Já existe OTP válido, não enviar novo
+      console.log('✅ OTP válido existe, não enviando novo')
+      return NextResponse.json({
+        success: true,
+        message: 'Código já enviado',
+        alreadySent: true,
+      })
+    }
+
+    console.log('🆕 Nenhum OTP válido, gerando novo...')
+
+    // Verificar rate limit (máximo 3 OTPs por hora para este telefone)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+    const { count } = await supabase
+      .from('otp_codes')
+      .select('*', { count: 'exact', head: true })
+      .eq('device_modelo_id', journeyId)
+      .gte('created_at', oneHourAgo)
+
+    if ((count || 0) >= 3) {
+      return NextResponse.json(
+        { error: 'Limite de envios atingido. Tente novamente em 1 hora.' },
+        { status: 429 }
+      )
+    }
+
+    // Gerar código OTP
+    const code = generateOTPCode()
+    const codeHash = await hashOTPCode(code)
+
+    // Salvar OTP no banco
+    const { error: insertError } = await supabase
+      .from('otp_codes')
+      .insert({
+        device_modelo_id: journeyId,
+        code_hash: codeHash,
+        expires_at: new Date(Date.now() + 20 * 60 * 1000).toISOString(), // 20 minutos
+      })
+
+    if (insertError) {
+      console.error('Erro ao salvar OTP:', insertError)
+      return NextResponse.json(
+        { error: 'Erro ao gerar código' },
+        { status: 500 }
+      )
+    }
+
+    // Enviar SMS com formato WebOTP para auto-preenchimento
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4500'
+    const origin = new URL(appUrl).hostname
+    const message = `Cashly: Seu codigo de verificacao e ${code}. Valido por 20 minutos.\n\n@${origin} #${code}`
+    const smsResult = await sendSMS({ to: phone, message })
+
+    if (!smsResult.success) {
+      console.error('Erro ao enviar SMS:', smsResult.error)
+      // Em desenvolvimento, logar o código para testes
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔐 Código OTP (dev):', code)
+      }
+    }
+
+    // Log do evento
+    await supabase
+      .from('journey_events')
+      .insert({
+        device_modelo_id: journeyId,
+        event_type: 'otp_sent',
+        step_name: 'otp',
+        metadata: { success: smsResult.success },
+      })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Código enviado',
+      // Em dev, retornar o código para facilitar testes
+      ...(process.env.NODE_ENV === 'development' && { devCode: code }),
+    })
+
+  } catch (error) {
+    console.error('Erro no envio de OTP:', error)
+    return NextResponse.json(
+      { error: 'Erro interno' },
+      { status: 500 }
+    )
+  }
+}
