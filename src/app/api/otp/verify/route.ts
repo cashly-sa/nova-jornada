@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase, logJourneyEvent } from '@/lib/supabase'
 import { hashOTPCode } from '@/lib/clicksend'
 
 /**
  * Verifica código OTP de forma ATÔMICA usando função PostgreSQL.
- * Isso resolve race conditions de double-click e garante consistência.
+ * Se a função não existir, usa fallback com queries separadas.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -20,19 +20,36 @@ export async function POST(request: NextRequest) {
     // Hash do código para comparação
     const codeHash = await hashOTPCode(code)
 
-    // Chamar função atômica do PostgreSQL
-    // Esta função faz SELECT + UPDATE + INSERT em uma única transação com lock
+    // Tentar função atômica do PostgreSQL
+    console.log('[OTP Verify] Chamando verify_otp_atomic, journeyId:', journeyId)
+
     const { data, error } = await supabase.rpc('verify_otp_atomic', {
       p_journey_id: journeyId,
       p_code_hash: codeHash,
     })
 
+    console.log('[OTP Verify] Resultado RPC:', { data, error: error?.message })
+
+    // Se a função não existir, usar fallback
     if (error) {
-      console.error('Erro na função verify_otp_atomic:', error)
+      console.error('[OTP Verify] Erro RPC:', error.message)
+
+      // Função não existe - usar fallback
+      if (error.message?.includes('function') || error.code === '42883') {
+        console.log('[OTP Verify] Usando fallback (função não existe)')
+        return await verifyOTPFallback(journeyId, codeHash)
+      }
+
       return NextResponse.json(
         { error: 'Erro interno ao verificar código' },
         { status: 500 }
       )
+    }
+
+    // Se data é nulo, usar fallback
+    if (!data) {
+      console.log('[OTP Verify] Data nulo, usando fallback')
+      return await verifyOTPFallback(journeyId, codeHash)
     }
 
     // Tratar resultado da função
@@ -67,10 +84,86 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Erro na verificação de OTP:', error)
+    console.error('[OTP Verify] Erro geral:', error)
     return NextResponse.json(
       { error: 'Erro interno' },
       { status: 500 }
     )
   }
+}
+
+/**
+ * Fallback: verifica OTP usando queries separadas (menos seguro, mas funciona sem a função)
+ */
+async function verifyOTPFallback(journeyId: number, codeHash: string) {
+  console.log('[OTP Fallback] Iniciando verificação')
+
+  // 1. Buscar OTP válido
+  const { data: otpRecord, error: otpError } = await supabase
+    .from('otp_codes')
+    .select('id, code_hash, attempts')
+    .eq('device_modelo_id', journeyId)
+    .eq('used', false)
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (otpError || !otpRecord) {
+    console.log('[OTP Fallback] OTP não encontrado:', otpError?.message)
+    return NextResponse.json(
+      { error: 'Código expirado ou não encontrado' },
+      { status: 400 }
+    )
+  }
+
+  // 2. Verificar tentativas
+  if (otpRecord.attempts >= 3) {
+    return NextResponse.json(
+      { error: 'Muitas tentativas. Solicite um novo código.' },
+      { status: 429 }
+    )
+  }
+
+  // 3. Verificar código
+  if (otpRecord.code_hash !== codeHash) {
+    // Incrementar tentativas
+    await supabase
+      .from('otp_codes')
+      .update({ attempts: otpRecord.attempts + 1 })
+      .eq('id', otpRecord.id)
+
+    return NextResponse.json(
+      {
+        error: 'Código inválido',
+        attempts: otpRecord.attempts + 1,
+      },
+      { status: 400 }
+    )
+  }
+
+  // 4. Sucesso - marcar como usado
+  await supabase
+    .from('otp_codes')
+    .update({ used: true })
+    .eq('id', otpRecord.id)
+
+  // 5. Atualizar jornada
+  await supabase
+    .from('device_modelo')
+    .update({
+      jornada_step: '02',
+      otp_verified_at: new Date().toISOString(),
+    })
+    .eq('id', journeyId)
+
+  // 6. Logar evento
+  await logJourneyEvent(journeyId, 'otp_verified', '01')
+
+  console.log('[OTP Fallback] Verificação concluída com sucesso')
+
+  return NextResponse.json({
+    success: true,
+    message: 'Código verificado com sucesso',
+  })
 }

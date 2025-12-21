@@ -11,10 +11,11 @@ import { SessionGuard } from '@/components/SessionGuard'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
+import { useHeartbeat } from '@/hooks/useHeartbeat'
 
 export default function ContratoPage() {
   return (
-    <SessionGuard requiredStep="contrato">
+    <SessionGuard requiredStep="06">
       <ContratoPageContent />
     </SessionGuard>
   )
@@ -31,9 +32,10 @@ function ContratoPageContent() {
   const termsRef = useRef<HTMLDivElement>(null)
 
   // Hooks de tracking
-  const { logEvent, trackClick, trackCheckbox, trackStepCompleted } = useEventTracker('contrato')
-  useVisibilityTracker('contrato')
-  useAbandonmentTracker(journeyId, 'contrato', isCompleted)
+  const { logEvent, trackClick, trackCheckbox, trackStepCompleted } = useEventTracker('06')
+  useVisibilityTracker('06')
+  useAbandonmentTracker(journeyId, '06', isCompleted)
+  useHeartbeat()
 
   // Logar visualização do contrato
   useEffect(() => {
@@ -88,7 +90,7 @@ function ContratoPageContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           journeyId,
-          step: 'sucesso',
+          step: '07',
           eventType: 'contrato_signed'
         })
       })
@@ -97,7 +99,7 @@ function ContratoPageContent() {
     }
 
     setIsCompleted(true)
-    setStep('sucesso')
+    setStep('07')
     router.push('/credito/sucesso')
 
     setIsLoading(false)
@@ -120,7 +122,7 @@ function ContratoPageContent() {
 
         {/* Progress */}
         <div className="px-4">
-          <JourneyProgress currentStep="contrato" completedSteps={['otp', 'device', 'renda', 'oferta', 'knox']} />
+          <JourneyProgress currentStep="06" completedSteps={['01', '02', '03', '04', '05']} />
         </div>
 
         {/* Conteúdo */}

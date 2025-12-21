@@ -70,7 +70,7 @@ export async function createJourney(leadId: number, ipAddress?: string, userAgen
     .from('device_modelo')
     .insert({
       lead_id: leadId,
-      jornada_step: 'otp',
+      jornada_step: '01',
       status: 'in_progress',
       ip_address: ipAddress,
       user_agent: userAgent,

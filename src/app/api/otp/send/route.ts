@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       .insert({
         device_modelo_id: journeyId,
         event_type: 'otp_sent',
-        step_name: 'otp',
+        step_name: '01',
         metadata: { success: smsResult.success },
       })
 

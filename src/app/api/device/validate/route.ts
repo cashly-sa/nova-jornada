@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     if (eligible) {
       updateData.valor_aprovado = valorAprovado
-      updateData.jornada_step = 'renda'
+      updateData.jornada_step = '03'
     } else {
       updateData.status = 'rejected'
       updateData.rejection_reason = 'device_not_eligible'
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     await logJourneyEvent(
       journeyId,
       eligible ? 'step_completed' : 'rejection',
-      'device',
+      '02',
       { modelo, fabricante, eligible, valorAprovado }
     )
 

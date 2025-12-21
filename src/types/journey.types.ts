@@ -1,15 +1,17 @@
 // Tipos da Jornada de Crédito
 
+// Steps numerados para ordenação clara
+// 00=CPF, 01=OTP, 02=Device, 03=Renda, 04=Oferta, 05=Knox, 06=Contrato, 07=Sucesso
 export type JourneyStep =
-  | 'cpf'
-  | 'cadastro'
-  | 'otp'
-  | 'device'
-  | 'renda'
-  | 'oferta'
-  | 'knox'
-  | 'contrato'
-  | 'sucesso'
+  | '00' // CPF
+  | '00b' // Cadastro
+  | '01' // OTP
+  | '02' // Device
+  | '03' // Renda
+  | '04' // Oferta
+  | '05' // Knox
+  | '06' // Contrato
+  | '07' // Sucesso
 
 export type JourneyStatus =
   | 'pending'
@@ -77,14 +79,14 @@ export interface JourneyData {
 
 // Steps ordenados para barra de progresso
 export const JOURNEY_STEPS: { key: JourneyStep; label: string }[] = [
-  { key: 'cpf', label: 'CPF' },
-  { key: 'otp', label: 'Código' },
-  { key: 'device', label: 'Celular' },
-  { key: 'renda', label: 'Renda' },
-  { key: 'oferta', label: 'Oferta' },
-  { key: 'knox', label: 'Knox' },
-  { key: 'contrato', label: 'Contrato' },
-  { key: 'sucesso', label: 'Sucesso' },
+  { key: '00', label: 'CPF' },
+  { key: '01', label: 'Código' },
+  { key: '02', label: 'Celular' },
+  { key: '03', label: 'Renda' },
+  { key: '04', label: 'Oferta' },
+  { key: '05', label: 'Knox' },
+  { key: '06', label: 'Contrato' },
+  { key: '07', label: 'Sucesso' },
 ]
 
 // Helper para obter índice do step
@@ -101,15 +103,15 @@ export function getProgress(step: JourneyStep): number {
 
 // Mapeamento de step para rota
 const STEP_ROUTES: Record<JourneyStep, string> = {
-  cpf: '/',
-  cadastro: '/cadastro',
-  otp: '/credito/otp',
-  device: '/credito/device',
-  renda: '/credito/renda',
-  oferta: '/credito/oferta',
-  knox: '/credito/knox',
-  contrato: '/credito/contrato',
-  sucesso: '/credito/sucesso',
+  '00': '/',
+  '00b': '/cadastro',
+  '01': '/credito/otp',
+  '02': '/credito/device',
+  '03': '/credito/renda',
+  '04': '/credito/oferta',
+  '05': '/credito/knox',
+  '06': '/credito/contrato',
+  '07': '/credito/sucesso',
 }
 
 // Helper para obter rota do step

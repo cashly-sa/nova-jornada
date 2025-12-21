@@ -19,12 +19,13 @@ export default function CPFPage() {
   const [cpf, setCpfValue] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isValidCPF, setIsValidCPF] = useState<boolean | null>(null)
 
   // Redirecionar se já tem sessão válida
   useEffect(() => {
     if (isCheckingSession) return
 
-    if (isValid && currentStep && currentStep !== 'cpf') {
+    if (isValid && currentStep && currentStep !== '00') {
       if (needsOtp) {
         // Sessão válida mas OTP expirou - ir para OTP
         router.push('/credito/otp')
@@ -39,6 +40,18 @@ export default function CPFPage() {
     const formatted = formatCPF(e.target.value)
     setCpfValue(formatted)
     setError('')
+
+    // Validar CPF em tempo real quando tiver 11 dígitos
+    const cleanCPF = formatted.replace(/\D/g, '')
+    if (cleanCPF.length === 11) {
+      const valid = validateCPF(cleanCPF)
+      setIsValidCPF(valid)
+      if (!valid) {
+        setError('CPF inválido')
+      }
+    } else {
+      setIsValidCPF(null)
+    }
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,7 +77,7 @@ export default function CPFPage() {
 
       if (!result.exists) {
         // CPF não existe - ir para cadastro
-        setStep('cadastro')
+        setStep('00b')
         router.push('/cadastro')
       } else {
         // CPF existe
@@ -108,7 +121,7 @@ export default function CPFPage() {
         }
 
         setJourneyData(journeyId, journeyToken)
-        setStep('otp')
+        setStep('01')
 
         // Ir para OTP
         router.push('/credito/otp')
@@ -154,7 +167,7 @@ export default function CPFPage() {
   }
 
   // Se tem sessão válida, não mostrar nada (vai redirecionar)
-  if (isValid && currentStep && currentStep !== 'cpf') {
+  if (isValid && currentStep && currentStep !== '00') {
     return (
       <MobileOnly>
         <div className="min-h-screen bg-background flex items-center justify-center">
@@ -213,7 +226,13 @@ export default function CPFPage() {
                   placeholder="000.000.000-00"
                   value={cpf}
                   onChange={handleCpfChange}
-                  className={`input-field ${error ? 'border-error focus:border-error focus:ring-error/20' : ''}`}
+                  className={`input-field ${
+                    error
+                      ? 'border-error focus:border-error focus:ring-error/20'
+                      : isValidCPF === true
+                        ? 'border-success focus:border-success focus:ring-success/20'
+                        : ''
+                  }`}
                   maxLength={14}
                   disabled={isLoading}
                   autoComplete="off"
@@ -234,7 +253,7 @@ export default function CPFPage() {
 
               <button
                 type="submit"
-                disabled={cpf.length < 14 || isLoading}
+                disabled={cpf.length < 14 || isLoading || isValidCPF === false}
                 className="btn-primary"
               >
                 {isLoading ? (

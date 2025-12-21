@@ -60,7 +60,7 @@ export function SessionGuard({
     }
 
     // Precisa de OTP e não está na página de OTP
-    if (needsOtp && requiredStep !== 'otp') {
+    if (needsOtp && requiredStep !== '01') {
       router.push('/credito/otp')
       return
     }
@@ -90,7 +90,7 @@ export function SessionGuard({
   }
 
   // Precisa de OTP e não está na página de OTP - não renderizar
-  if (needsOtp && requiredStep !== 'otp') {
+  if (needsOtp && requiredStep !== '01') {
     return <LoadingSpinner />
   }
 

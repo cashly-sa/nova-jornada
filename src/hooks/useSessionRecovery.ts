@@ -58,7 +58,7 @@ export function useSessionRecovery(): SessionRecoveryResult {
     if (!token) {
       setIsLoading(false)
       setIsValid(false)
-      setCurrentStep('cpf')
+      setCurrentStep('00')
       return
     }
 
@@ -80,11 +80,11 @@ export function useSessionRecovery(): SessionRecoveryResult {
         if (data.reason === 'not_found' || data.reason === 'journey_expired') {
           reset()
           setIsValid(false)
-          setCurrentStep('cpf')
+          setCurrentStep('00')
         } else if (data.reason === 'journey_completed') {
           reset()
           setIsValid(false)
-          setCurrentStep('cpf')
+          setCurrentStep('00')
         }
         setIsLoading(false)
         return
@@ -123,7 +123,7 @@ export function useSessionRecovery(): SessionRecoveryResult {
         // OTP expirou - precisa validar novamente
         clearForNewOtp()
         setNeedsOtp(true)
-        setCurrentStep('otp')
+        setCurrentStep('01')
         setIsValid(true) // Sessão válida, mas precisa de OTP
       } else {
         // OTP válido - pode continuar

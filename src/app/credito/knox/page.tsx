@@ -11,6 +11,7 @@ import { SessionGuard } from '@/components/SessionGuard'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
+import { useHeartbeat } from '@/hooks/useHeartbeat'
 
 const steps = [
   {
@@ -37,7 +38,7 @@ const steps = [
 
 export default function KnoxPage() {
   return (
-    <SessionGuard requiredStep="knox">
+    <SessionGuard requiredStep="05">
       <KnoxPageContent />
     </SessionGuard>
   )
@@ -53,9 +54,10 @@ function KnoxPageContent() {
   const [isCompleted, setIsCompleted] = useState(false)
 
   // Hooks de tracking
-  const { logEvent, trackClick, trackInputFocus, trackFormError, trackLinkClick, trackStepCompleted } = useEventTracker('knox')
-  useVisibilityTracker('knox')
-  useAbandonmentTracker(journeyId, 'knox', isCompleted)
+  const { logEvent, trackClick, trackInputFocus, trackFormError, trackLinkClick, trackStepCompleted } = useEventTracker('05')
+  useVisibilityTracker('05')
+  useAbandonmentTracker(journeyId, '05', isCompleted)
+  useHeartbeat()
 
   const handleImeiChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatIMEI(e.target.value)
@@ -100,7 +102,7 @@ function KnoxPageContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           journeyId,
-          step: 'contrato',
+          step: '06',
           eventType: 'knox_verified'
         })
       })
@@ -111,7 +113,7 @@ function KnoxPageContent() {
     // Salvar IMEI e navegar
     setIsCompleted(true)
     setKnoxImei(imei)
-    setStep('contrato')
+    setStep('06')
     router.push('/credito/contrato')
 
     setIsLoading(false)
@@ -127,7 +129,7 @@ function KnoxPageContent() {
 
         {/* Progress */}
         <div className="px-4">
-          <JourneyProgress currentStep="knox" completedSteps={['otp', 'device', 'renda', 'oferta']} />
+          <JourneyProgress currentStep="05" completedSteps={['01', '02', '03', '04']} />
         </div>
 
         {/* Conteúdo */}

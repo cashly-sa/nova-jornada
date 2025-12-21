@@ -9,13 +9,15 @@ import { useJourneyStore } from '@/store/journey.store'
 import { detectDevice } from '@/lib/device-detection'
 import { formatCurrency } from '@/utils/validators'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
+import { useHeartbeat } from '@/hooks/useHeartbeat'
+import { useEventTracker } from '@/hooks/useEventTracker'
 import { SessionGuard } from '@/components/SessionGuard'
 
 type Status = 'detecting' | 'eligible' | 'not_eligible' | 'error'
 
 export default function DevicePage() {
   return (
-    <SessionGuard requiredStep="device">
+    <SessionGuard requiredStep="02">
       <DevicePageContent />
     </SessionGuard>
   )
@@ -34,8 +36,10 @@ function DevicePageContent() {
   // Ref para evitar chamadas duplicadas (React StrictMode)
   const hasValidated = useRef(false)
 
-  // Rastrear abandono - só dispara se não clicou em continuar
-  useAbandonmentTracker(journeyId, 'device', isCompleted)
+  // Hooks de tracking
+  const { logEvent, trackClick, trackStepCompleted } = useEventTracker('02')
+  useAbandonmentTracker(journeyId, '02', isCompleted)
+  useHeartbeat()
 
   // Detectar dispositivo automaticamente (apenas uma vez)
   useEffect(() => {
@@ -93,9 +97,34 @@ function DevicePageContent() {
     }
   }
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    trackClick('continue', 'Continuar')
+    logEvent('plan_approval', { valor_aprovado: valorAprovado })
+    trackStepCompleted()
+
+    // Atualizar step no banco antes de navegar
+    try {
+      const response = await fetch('/api/journey/step', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          journeyId,
+          step: '03',
+          eventType: 'plan_approval'
+        })
+      })
+
+      if (!response.ok) {
+        console.error('Erro ao atualizar step')
+        return
+      }
+    } catch (err) {
+      console.error('Erro ao atualizar step:', err)
+      return
+    }
+
     setIsCompleted(true)
-    setStep('renda')
+    setStep('03')
     router.push('/credito/renda')
   }
 
@@ -109,7 +138,7 @@ function DevicePageContent() {
 
         {/* Progress */}
         <div className="px-4">
-          <JourneyProgress currentStep="device" completedSteps={['otp']} />
+          <JourneyProgress currentStep="02" completedSteps={['01']} />
         </div>
 
         {/* Conteúdo */}

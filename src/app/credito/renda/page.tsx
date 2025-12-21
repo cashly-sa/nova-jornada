@@ -10,6 +10,7 @@ import { SessionGuard } from '@/components/SessionGuard'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
+import { useHeartbeat } from '@/hooks/useHeartbeat'
 
 // Logo Uber (wordmark oficial)
 function UberLogo({ color = 'black' }: { color?: 'black' | 'white' }) {
@@ -42,7 +43,7 @@ function Logo99({ inverted = false }: { inverted?: boolean }) {
 
 export default function RendaPage() {
   return (
-    <SessionGuard requiredStep="renda">
+    <SessionGuard requiredStep="03">
       <RendaPageContent />
     </SessionGuard>
   )
@@ -59,9 +60,10 @@ function RendaPageContent() {
   const [isCompleted, setIsCompleted] = useState(false)
 
   // Hooks de tracking
-  const { logEvent, trackClick, trackStepCompleted } = useEventTracker('renda')
-  useVisibilityTracker('renda')
-  useAbandonmentTracker(journeyId, 'renda', isCompleted)
+  const { logEvent, trackClick, trackStepCompleted } = useEventTracker('03')
+  useVisibilityTracker('03')
+  useAbandonmentTracker(journeyId, '03', isCompleted)
+  useHeartbeat()
 
   const handleSelect = async (selected: 'uber' | '99') => {
     try {
@@ -109,7 +111,7 @@ function RendaPageContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             journeyId,
-            step: 'oferta',
+            step: '04',
             eventType: 'renda_validated'
           })
         })
@@ -120,7 +122,7 @@ function RendaPageContent() {
       // Ir para oferta após breve delay
       setTimeout(() => {
         setIsCompleted(true)
-        setStep('oferta')
+        setStep('04')
         router.push('/credito/oferta')
       }, 1500)
 
@@ -150,7 +152,7 @@ function RendaPageContent() {
 
         {/* Progress */}
         <div className="px-4">
-          <JourneyProgress currentStep="renda" completedSteps={['otp', 'device']} />
+          <JourneyProgress currentStep="03" completedSteps={['01', '02']} />
         </div>
 
         {/* Conteúdo */}

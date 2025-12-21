@@ -12,7 +12,7 @@ import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 
 export default function SucessoPage() {
   return (
-    <SessionGuard requiredStep="sucesso">
+    <SessionGuard requiredStep="07">
       <SucessoPageContent />
     </SessionGuard>
   )
@@ -23,8 +23,8 @@ function SucessoPageContent() {
   const { valorAprovado, contratoId, leadData, reset } = useJourneyStore()
 
   // Hooks de tracking
-  const { logEvent, trackClick, trackLinkClick } = useEventTracker('sucesso')
-  useVisibilityTracker('sucesso')
+  const { logEvent, trackClick, trackLinkClick } = useEventTracker('07')
+  useVisibilityTracker('07')
 
   // Logar conclusão da jornada
   useEffect(() => {

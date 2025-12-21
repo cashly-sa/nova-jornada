@@ -48,7 +48,7 @@ const initialState = {
   isNewLead: false,
   journeyId: null,
   token: null,
-  currentStep: 'cpf' as JourneyStep,
+  currentStep: '00' as JourneyStep,
   otpVerifiedAt: null,
   otpVerified: false,
   deviceInfo: null,
@@ -98,7 +98,7 @@ export const useJourneyStore = create<JourneyState>()(
       clearForNewOtp: () => set({
         otpVerified: false,
         otpVerifiedAt: null,
-        currentStep: 'otp',
+        currentStep: '01',
         // Mantém: journeyId, token, cpf, leadId, leadData
       }),
     }),

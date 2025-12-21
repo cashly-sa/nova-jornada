@@ -11,10 +11,11 @@ import { SessionGuard } from '@/components/SessionGuard'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
+import { useHeartbeat } from '@/hooks/useHeartbeat'
 
 export default function OfertaPage() {
   return (
-    <SessionGuard requiredStep="oferta">
+    <SessionGuard requiredStep="04">
       <OfertaPageContent />
     </SessionGuard>
   )
@@ -30,9 +31,10 @@ function OfertaPageContent() {
   const pageLoadTime = useRef<number>(Date.now())
 
   // Hooks de tracking
-  const { logEvent, trackClick, trackStepCompleted } = useEventTracker('oferta')
-  useVisibilityTracker('oferta')
-  useAbandonmentTracker(journeyId, 'oferta', isCompleted)
+  const { logEvent, trackClick, trackStepCompleted } = useEventTracker('04')
+  useVisibilityTracker('04')
+  useAbandonmentTracker(journeyId, '04', isCompleted)
+  useHeartbeat()
 
   // Logar visualização da oferta
   useEffect(() => {
@@ -59,7 +61,7 @@ function OfertaPageContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           journeyId,
-          step: 'knox',
+          step: '05',
           eventType: 'oferta_accepted'
         })
       })
@@ -70,7 +72,7 @@ function OfertaPageContent() {
 
       trackStepCompleted()
       setIsCompleted(true)
-      setStep('knox')
+      setStep('05')
       router.push('/credito/knox')
 
     } catch (err) {
@@ -108,7 +110,7 @@ function OfertaPageContent() {
 
         {/* Progress */}
         <div className="px-4">
-          <JourneyProgress currentStep="oferta" completedSteps={['otp', 'device', 'renda']} />
+          <JourneyProgress currentStep="04" completedSteps={['01', '02', '03']} />
         </div>
 
         {/* Conteúdo */}

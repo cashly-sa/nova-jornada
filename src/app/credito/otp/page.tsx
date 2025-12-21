@@ -8,6 +8,7 @@ import { JourneyProgress } from '@/components/JourneyProgress'
 import { useJourneyStore, useHydration } from '@/store/journey.store'
 import { maskPhone } from '@/utils/validators'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
+import { useHeartbeat } from '@/hooks/useHeartbeat'
 
 export default function OTPPage() {
   const router = useRouter()
@@ -25,7 +26,8 @@ export default function OTPPage() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   // Rastrear abandono - só dispara se não verificou OTP
-  useAbandonmentTracker(journeyId, 'otp', isCompleted)
+  useAbandonmentTracker(journeyId, '01', isCompleted)
+  useHeartbeat()
   const hasSentOTP = useRef(false)
 
   // Redirecionar se não tiver dados (após hidratação)
@@ -192,7 +194,7 @@ export default function OTPPage() {
       // Sucesso - marcar como completado antes de navegar
       setIsCompleted(true)
       setOtpVerified(true)
-      setStep('device')
+      setStep('02')
       router.push('/credito/device')
 
     } catch (err) {
@@ -233,7 +235,7 @@ export default function OTPPage() {
 
         {/* Progress */}
         <div className="px-4">
-          <JourneyProgress currentStep="otp" />
+          <JourneyProgress currentStep="01" />
         </div>
 
         {/* Conteúdo */}

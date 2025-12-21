@@ -148,7 +148,7 @@ export default function CadastroPage() {
       }
 
       setJourneyData(journeyId, journeyToken)
-      setStep('otp')
+      setStep('01')
 
       // Ir para OTP
       router.push('/credito/otp')

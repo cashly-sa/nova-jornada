@@ -11,12 +11,12 @@ export function JourneyProgress({ currentStep, completedSteps = [] }: JourneyPro
   const currentIndex = getStepIndex(currentStep)
 
   // Não mostrar progresso na etapa CPF (entrada)
-  if (currentStep === 'cpf' || currentStep === 'cadastro') {
+  if (currentStep === '00' || currentStep === '00b') {
     return null
   }
 
   // Filtrar apenas os steps relevantes para o fluxo de crédito
-  const creditSteps = JOURNEY_STEPS.filter(s => !['cpf', 'cadastro'].includes(s.key))
+  const creditSteps = JOURNEY_STEPS.filter(s => !['00', '00b'].includes(s.key))
   const adjustedCurrentIndex = creditSteps.findIndex(s => s.key === currentStep)
 
   return (

@@ -22,7 +22,9 @@
       "Bash(git reset:*)",
       "Bash(git commit:*)",
       "Bash(if not exist \"c:\\\\Users\\\\Alexandre Abreu\\\\OneDrive\\\\Cashly\\\\12 - GITHUB\\\\Nova Jornada\\\\src\\\\app\\\\api\\\\journey\\\\step\" mkdir \"c:\\\\Users\\\\Alexandre Abreu\\\\OneDrive\\\\Cashly\\\\12 - GITHUB\\\\Nova Jornada\\\\src\\\\app\\\\api\\\\journey\\\\step\")",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: implement idempotency system for journey operations\n\n- Add atomic OTP verification via PostgreSQL function \\(verify_otp_atomic\\)\n- Add Compare-And-Swap pattern to device validation API\n- Add UNIQUE partial index on otp_codes to prevent duplicates\n- Add error handling with retry UI to renda/oferta pages\n- Add event tracking hooks \\(useEventTracker, useVisibilityTracker\\)\n- Add journey step/event APIs for tracking\n- Update arquitetura.md with idempotency documentation \\(v1.2\\)\n\nPrevents race conditions and duplicate operations for users with\nunstable mobile connections \\(Uber/99 drivers on 3G/4G\\).\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: implement idempotency system for journey operations\n\n- Add atomic OTP verification via PostgreSQL function \\(verify_otp_atomic\\)\n- Add Compare-And-Swap pattern to device validation API\n- Add UNIQUE partial index on otp_codes to prevent duplicates\n- Add error handling with retry UI to renda/oferta pages\n- Add event tracking hooks \\(useEventTracker, useVisibilityTracker\\)\n- Add journey step/event APIs for tracking\n- Update arquitetura.md with idempotency documentation \\(v1.2\\)\n\nPrevents race conditions and duplicate operations for users with\nunstable mobile connections \\(Uber/99 drivers on 3G/4G\\).\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(if exist \".next\" rmdir /s /q \".next\")",
+      "Bash(cat:*)"
     ]
   }
 }
