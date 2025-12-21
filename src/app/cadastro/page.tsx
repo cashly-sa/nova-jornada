@@ -188,7 +188,7 @@ export default function CadastroPage() {
         </div>
 
         {/* Conteúdo */}
-        <div className="flex-1 container-mobile">
+        <div className="journey-content container-mobile">
           {currentStep === 1 ? (
             <div className="card animate-slide-up">
               <h1 className="page-title">Seus dados</h1>

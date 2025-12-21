@@ -61,8 +61,7 @@ function OfertaPageContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           journeyId,
-          step: '05',
-          eventType: 'oferta_accepted'
+          step: '05'
         })
       })
 
@@ -114,7 +113,7 @@ function OfertaPageContent() {
         </div>
 
         {/* Conteúdo */}
-        <div className="flex-1 container-mobile flex flex-col justify-center">
+        <div className="journey-content container-mobile">
           <div className="card animate-slide-up">
             <div className="text-center mb-6">
               <span className="inline-block px-3 py-1 bg-success/10 text-success text-sm font-medium rounded-full mb-4">

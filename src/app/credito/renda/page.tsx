@@ -111,8 +111,7 @@ function RendaPageContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             journeyId,
-            step: '04',
-            eventType: 'renda_validated'
+            step: '04'
           })
         })
       } catch (err) {
@@ -156,7 +155,7 @@ function RendaPageContent() {
         </div>
 
         {/* Conteúdo */}
-        <div className="flex-1 container-mobile flex flex-col justify-center">
+        <div className="journey-content container-mobile">
           {status === 'form' && (
             <div className="card animate-slide-up">
               <h1 className="page-title text-center">Validação de renda</h1>

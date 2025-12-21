@@ -54,7 +54,7 @@ function SucessoPageContent() {
         </div>
 
         {/* Conteúdo */}
-        <div className="flex-1 container-mobile flex flex-col justify-center">
+        <div className="journey-content container-mobile">
           <div className="card animate-slide-up text-center">
             {/* Ícone de sucesso */}
             <div className="relative mb-6">

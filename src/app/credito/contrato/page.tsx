@@ -90,8 +90,7 @@ function ContratoPageContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           journeyId,
-          step: '07',
-          eventType: 'contrato_signed'
+          step: '07'
         })
       })
     } catch (err) {
@@ -126,7 +125,7 @@ function ContratoPageContent() {
         </div>
 
         {/* Conteúdo */}
-        <div className="flex-1 container-mobile pb-6">
+        <div className="journey-content container-mobile">
           <div className="card animate-slide-up">
             <h1 className="page-title">Contrato de Crédito</h1>
             <p className="page-subtitle">

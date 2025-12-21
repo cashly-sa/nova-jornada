@@ -39,6 +39,20 @@ export async function POST(request: NextRequest) {
 
     console.log('🆕 Nenhum OTP válido, gerando novo...')
 
+    // Invalidar OTPs expirados (marcar como usados) para liberar a constraint única
+    const { error: invalidateError } = await supabase
+      .from('otp_codes')
+      .update({ used: true })
+      .eq('device_modelo_id', journeyId)
+      .eq('used', false)
+      .lt('expires_at', new Date().toISOString())
+
+    if (invalidateError) {
+      console.log('⚠️ Erro ao invalidar OTPs expirados:', invalidateError)
+    } else {
+      console.log('✅ OTPs expirados invalidados')
+    }
+
     // Verificar rate limit (máximo 3 OTPs por hora para este telefone)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const { count } = await supabase

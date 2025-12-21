@@ -207,7 +207,7 @@ export default function CPFPage() {
         </div>
 
         {/* Conteúdo */}
-        <div className="flex-1 container-mobile flex flex-col justify-center">
+        <div className="journey-content container-mobile">
           <div className="card animate-slide-up">
             <h1 className="page-title text-center">Solicite seu crédito</h1>
             <p className="page-subtitle text-center">

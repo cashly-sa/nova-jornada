@@ -102,8 +102,7 @@ function KnoxPageContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           journeyId,
-          step: '06',
-          eventType: 'knox_verified'
+          step: '06'
         })
       })
     } catch (err) {
@@ -133,7 +132,7 @@ function KnoxPageContent() {
         </div>
 
         {/* Conteúdo */}
-        <div className="flex-1 container-mobile pb-6">
+        <div className="journey-content container-mobile">
           <div className="card animate-slide-up">
             <h1 className="page-title">Registro Knox Guard</h1>
             <p className="page-subtitle">

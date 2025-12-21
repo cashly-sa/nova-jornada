@@ -5,15 +5,14 @@ import { useRouter } from 'next/navigation'
 import { MobileOnly } from '@/components/MobileOnly'
 import { CashlyLogo } from '@/components/CashlyLogo'
 import { JourneyProgress } from '@/components/JourneyProgress'
-import { useJourneyStore } from '@/store/journey.store'
+import { useJourneyStore, useHydration } from '@/store/journey.store'
 import { detectDevice } from '@/lib/device-detection'
-import { formatCurrency } from '@/utils/validators'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { SessionGuard } from '@/components/SessionGuard'
 
-type Status = 'detecting' | 'eligible' | 'not_eligible' | 'error'
+type Status = 'detecting' | 'eligible' | 'not_eligible' | 'share_link' | 'error'
 
 export default function DevicePage() {
   return (
@@ -25,13 +24,15 @@ export default function DevicePage() {
 
 function DevicePageContent() {
   const router = useRouter()
-  const { journeyId, otpVerified, setDeviceInfo, setValorAprovado, setStep } = useJourneyStore()
+  const hydrated = useHydration()
+  const { journeyId, token, setDeviceInfo, setValorAprovado, setStep } = useJourneyStore()
 
   const [status, setStatus] = useState<Status>('detecting')
   const [deviceName, setDeviceName] = useState('')
   const [valorAprovado, setValor] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [isCompleted, setIsCompleted] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   // Ref para evitar chamadas duplicadas (React StrictMode)
   const hasValidated = useRef(false)
@@ -41,13 +42,16 @@ function DevicePageContent() {
   useAbandonmentTracker(journeyId, '02', isCompleted)
   useHeartbeat()
 
-  // Detectar dispositivo automaticamente (apenas uma vez)
+  // Link compartilhável (placeholder fake por enquanto)
+  const shareableLink = `https://cashly.app/c/${token?.slice(0, 8) || 'demo'}${token ? token.slice(-4) : ''}`
+
+  // Detectar dispositivo automaticamente (apenas uma vez, após hidratação)
   useEffect(() => {
-    if (journeyId && otpVerified && !hasValidated.current) {
+    if (hydrated && journeyId && !hasValidated.current) {
       hasValidated.current = true
       detectAndValidate()
     }
-  }, [journeyId, otpVerified]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [hydrated, journeyId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const detectAndValidate = async () => {
     setStatus('detecting')
@@ -109,8 +113,7 @@ function DevicePageContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           journeyId,
-          step: '03',
-          eventType: 'plan_approval'
+          step: '03'
         })
       })
 
@@ -128,6 +131,44 @@ function DevicePageContent() {
     router.push('/credito/renda')
   }
 
+  const handleTryAnotherDevice = () => {
+    trackClick('try_another_device', 'Quero tentar com outro modelo')
+    logEvent('try_another_device', { original_device: deviceName })
+    setStatus('share_link')
+  }
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareableLink)
+      setCopied(true)
+      logEvent('link_copied', { link: shareableLink })
+
+      // Reset após 2s
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Erro ao copiar:', err)
+    }
+  }
+
+  const handleShareLink = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Cashly - Crédito com garantia de celular',
+          text: 'Use esse link para solicitar crédito:',
+          url: shareableLink,
+        })
+        logEvent('link_shared', { method: 'native_share' })
+      } catch (err) {
+        // Usuário cancelou ou erro
+        console.log('Share cancelled or failed:', err)
+      }
+    } else {
+      // Fallback: copiar link
+      handleCopyLink()
+    }
+  }
+
   return (
     <MobileOnly>
       <main className="min-h-screen bg-background flex flex-col">
@@ -142,7 +183,7 @@ function DevicePageContent() {
         </div>
 
         {/* Conteúdo */}
-        <div className="flex-1 container-mobile flex flex-col justify-center">
+        <div className="journey-content container-mobile">
           {status === 'detecting' && (
             <div className="card animate-fade-in text-center">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
@@ -169,17 +210,9 @@ function DevicePageContent() {
                 </svg>
               </div>
               <h1 className="page-title text-success">Celular aprovado!</h1>
-              <p className="text-text-secondary mb-2">{deviceName}</p>
-
-              {valorAprovado && (
-                <div className="my-6 p-4 bg-primary/5 rounded-xl border border-primary/20">
-                  <p className="text-sm text-text-secondary mb-1">Valor pré-aprovado</p>
-                  <p className="text-3xl font-bold text-primary">
-                    {formatCurrency(valorAprovado)}
-                  </p>
-                </div>
-              )}
-
+              <p className="text-text-secondary mb-6">
+                Seu modelo de celular <span className="font-semibold text-text-primary">{deviceName}</span> é elegível
+              </p>
               <button onClick={handleContinue} className="btn-primary">
                 Continuar
               </button>
@@ -193,21 +226,75 @@ function DevicePageContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <h1 className="page-title text-error">Dispositivo não elegível</h1>
-              <p className="text-text-secondary mb-2">
-                Infelizmente seu dispositivo não é compatível com nosso programa de crédito.
-              </p>
-              {deviceName && deviceName !== 'unknown' && (
-                <p className="text-sm text-text-secondary mb-6">
-                  Dispositivo: {deviceName}
-                </p>
-              )}
+              <h1 className="text-xl font-bold text-text-primary mb-6">
+                Infelizmente seu modelo de celular não é elegível
+              </h1>
               <button
-                onClick={() => router.push('/')}
-                className="btn-secondary"
+                onClick={handleTryAnotherDevice}
+                className="btn-primary"
               >
-                Voltar ao início
+                Quero tentar com outro modelo
               </button>
+            </div>
+          )}
+
+          {status === 'share_link' && (
+            <div className="card animate-slide-up text-center">
+              {/* Ícone de compartilhar */}
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              </div>
+
+              {/* Título */}
+              <h1 className="page-title">Compartilhe o link</h1>
+
+              {/* Mensagem */}
+              <p className="text-text-secondary mb-6">
+                Use esse link para tentar aprovação em outro modelo de celular
+              </p>
+
+              {/* Caixa do link estilo Pix */}
+              <div className="bg-gray-100 rounded-xl p-4 mb-6 relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-primary/50" />
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-xs text-text-secondary mb-1">Link de indicação</p>
+                    <p className="text-sm font-mono text-text-primary truncate">
+                      cashly.app/c/{token?.slice(0, 8) || '••••••••'}••••
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botões */}
+              <div className="space-y-3">
+                <button
+                  onClick={handleCopyLink}
+                  className="btn-primary flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  {copied ? 'Link copiado!' : 'Copiar Link'}
+                </button>
+
+                <button
+                  onClick={handleShareLink}
+                  className="btn-secondary flex items-center justify-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                  Compartilhar Link
+                </button>
+              </div>
             </div>
           )}
 

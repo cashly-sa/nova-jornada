@@ -52,6 +52,12 @@ body {
     @apply w-full max-w-md mx-auto px-4 py-6;
   }
 
+  /* Container para conteúdo da jornada - alinhado ao topo */
+  .journey-content {
+    @apply flex-1 flex flex-col pt-4;
+    /* Conteúdo alinhado ao topo com padding, não centralizado */
+  }
+
   /* Card padrão */
   .card {
     @apply bg-white rounded-xl p-6 shadow-soft;

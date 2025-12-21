@@ -142,18 +142,32 @@ export async function getJourneyByToken(token: string) {
   return data
 }
 
+// Mapeamento de step para coluna de timestamp (se existir)
+const STEP_TIMESTAMP_MAP: Record<string, string | null> = {
+  '01': 'otp_verified_at',      // Já é atualizado pela verify_otp_atomic
+  '02': 'device_checked_at',    // Já é atualizado pela /api/device/validate
+  '03': null,                   // Renda - não tem coluna específica
+  '04': null,                   // Oferta - não tem coluna específica
+  '05': null,                   // Knox - não tem coluna específica
+  '06': 'contrato_assinado_at', // Contrato
+  '07': 'completed_at',         // Sucesso
+}
+
 // Atualizar step da jornada
 export async function updateJourneyStep(
   journeyId: number,
   step: string,
   additionalData?: Record<string, unknown>
 ) {
-  const timestampField = `${step}_checked_at`
-
   const updateData: Record<string, unknown> = {
     jornada_step: step,
-    [timestampField]: new Date().toISOString(),
     ...additionalData
+  }
+
+  // Adicionar timestamp se existir coluna para este step
+  const timestampField = STEP_TIMESTAMP_MAP[step]
+  if (timestampField) {
+    updateData[timestampField] = new Date().toISOString()
   }
 
   const { error } = await supabase
