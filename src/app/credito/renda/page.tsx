@@ -13,28 +13,47 @@ import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
 import { STEP_NAMES } from '@/types/journey.types'
 
-// Logo Uber (wordmark oficial)
-function UberLogo({ color = 'black' }: { color?: 'black' | 'white' }) {
+// Logo Uber (ícone quadrado oficial)
+function UberLogo({ inverted = false }: { inverted?: boolean }) {
+  const bgColor = inverted ? '#fff' : '#000'
+  const textColor = inverted ? '#000' : '#fff'
   return (
-    <svg viewBox="0 0 93 29" fill={color} className="w-16 h-auto">
-      <path d="M11.4 23.1C5 23.1 0 18.3 0 11.6V0h4.8v11.3c0 4 2.7 7 6.6 7 4 0 6.7-3 6.7-7V0h4.8v11.6c0 6.7-5.1 11.5-11.5 11.5zm61.3-.2h-5l-9.2-9.8v9.8h-4.8V.5h4.8v9.3l9-9.3h5.5l-10 10.2 9.7 12.2zm-30.2 0V.5h15.3v4.1h-10.5v5h10.2v4.1h-10.2v5h10.5v4.2H42.5zm-18.8 0V.5h10c3.7 0 6.3 2.5 6.3 5.9 0 2.4-1.2 4.2-3.2 5.1 2.3.8 3.8 2.8 3.8 5.4 0 3.7-2.8 6-6.6 6H23.7zm5.8-13.7h3.7c1.4 0 2.3-.9 2.3-2.2 0-1.3-.9-2.2-2.3-2.2h-3.7v4.4zm0 9.4h4c1.6 0 2.6-1 2.6-2.4 0-1.4-1-2.4-2.6-2.4h-4v4.8z"/>
+    <svg viewBox="0 0 96 96" className="w-16 h-16">
+      <path fill={bgColor} fillRule="evenodd" d="M7.27,0H88.73A7.28,7.28,0,0,1,96,7.27V88.73A7.28,7.28,0,0,1,88.73,96H7.27A7.28,7.28,0,0,1,0,88.73V7.27A7.28,7.28,0,0,1,7.27,0Z"/>
+      <path fill={textColor} d="M18.8,52.91A5.61,5.61,0,0,0,20,54.81,5,5,0,0,0,21.71,56a5.71,5.71,0,0,0,2.2.42,5.34,5.34,0,0,0,3.95-1.66A5.54,5.54,0,0,0,29,52.89a6.75,6.75,0,0,0,.42-2.44V36.54h3.38V59.07H29.48V57a7.77,7.77,0,0,1-2.65,1.83,8.41,8.41,0,0,1-3.3.65,8.89,8.89,0,0,1-3.36-.63A8,8,0,0,1,17.46,57a8.44,8.44,0,0,1-1.8-2.78A9.53,9.53,0,0,1,15,50.64V36.54h3.38V50.45a6.9,6.9,0,0,0,.42,2.46ZM77,46.68a4.34,4.34,0,0,0-1,3.06v9.33H72.73V42.66H76v2a4.54,4.54,0,0,1,1.59-1.58,4.45,4.45,0,0,1,2.33-.58H81v3H79.65A3.42,3.42,0,0,0,77,46.68Zm-22.08.9a8.87,8.87,0,0,1,1.77-2.72A8.29,8.29,0,0,1,59.38,43,8.69,8.69,0,0,1,66,43a7.69,7.69,0,0,1,2.61,1.79,8.18,8.18,0,0,1,1.71,2.7,9.37,9.37,0,0,1,.61,3.39v1.07H57.57a5.44,5.44,0,0,0,.65,1.85,5.74,5.74,0,0,0,1.2,1.48,5.9,5.9,0,0,0,1.64,1,5.52,5.52,0,0,0,1.95.35,5.62,5.62,0,0,0,4.73-2.41l2.35,1.74A8.55,8.55,0,0,1,63,59.42a9.1,9.1,0,0,1-3.43-.64A8.38,8.38,0,0,1,55,54.26a8.46,8.46,0,0,1-.68-3.4,8.63,8.63,0,0,1,.64-3.28Zm4.53-1.27a5.45,5.45,0,0,0-1.82,3h10a5.29,5.29,0,0,0-1.78-3,5.06,5.06,0,0,0-6.4,0ZM38.65,36.54v8.21A8.6,8.6,0,0,1,41.26,43a7.83,7.83,0,0,1,3.22-.66,8.65,8.65,0,0,1,6.11,2.51,8.77,8.77,0,0,1,1.83,2.74,8.26,8.26,0,0,1,.68,3.35,8.13,8.13,0,0,1-.68,3.33A8.8,8.8,0,0,1,50.59,57a8.65,8.65,0,0,1-6.11,2.51,8,8,0,0,1-3.24-.66A8.65,8.65,0,0,1,38.62,57v2.06H35.4V36.54ZM39,53.12a5.65,5.65,0,0,0,1.21,1.8A5.79,5.79,0,0,0,42,56.14a5.51,5.51,0,0,0,2.22.45,5.43,5.43,0,0,0,2.19-.45,5.74,5.74,0,0,0,1.79-1.22,6.16,6.16,0,0,0,1.2-1.8,5.51,5.51,0,0,0,.45-2.22,5.6,5.6,0,0,0-.45-2.24,6,6,0,0,0-1.2-1.82,5.55,5.55,0,0,0-1.79-1.21,5.64,5.64,0,0,0-6.18,1.21A5.88,5.88,0,0,0,39,48.66a5.6,5.6,0,0,0-.45,2.24A5.67,5.67,0,0,0,39,53.12Z"/>
     </svg>
   )
 }
 
-// Logo 99 (circular amarelo oficial)
+// Logo 99 (oficial simplificado com gradiente)
 function Logo99({ inverted = false }: { inverted?: boolean }) {
+  // Versão simplificada do logo 99 com gradiente oficial
+  const bgGradient = inverted
+    ? 'url(#grad99inv)'
+    : 'url(#grad99)'
+  const textColor = inverted ? '#fd0' : '#000'
+
   return (
     <svg viewBox="0 0 100 100" className="w-16 h-16">
-      <circle cx="50" cy="50" r="50" fill={inverted ? '#000' : '#FFCC00'}/>
+      <defs>
+        <linearGradient id="grad99" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#fd0"/>
+          <stop offset="100%" stopColor="#ff8200"/>
+        </linearGradient>
+        <linearGradient id="grad99inv" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#1a1a1a"/>
+          <stop offset="100%" stopColor="#333"/>
+        </linearGradient>
+      </defs>
+      <rect x="5" y="5" width="90" height="90" rx="18" fill={bgGradient}/>
       <text
         x="50"
-        y="65"
+        y="68"
         textAnchor="middle"
-        fontSize="45"
+        fontSize="52"
         fontWeight="bold"
-        fontFamily="Arial, sans-serif"
-        fill={inverted ? '#FFCC00' : '#000'}
+        fontFamily="system-ui, -apple-system, sans-serif"
+        fill={textColor}
       >
         99
       </text>
@@ -181,7 +200,7 @@ function RendaPageContent() {
                   `}
                 >
                   <div className="w-20 h-20 mb-3 flex items-center justify-center">
-                    <UberLogo color={plataforma === 'uber' ? 'white' : 'black'} />
+                    <UberLogo inverted={plataforma === 'uber'} />
                   </div>
                   <span className={`text-xl font-bold ${plataforma === 'uber' ? 'text-white' : 'text-black'}`}>
                     Uber
@@ -196,8 +215,8 @@ function RendaPageContent() {
                     flex flex-col items-center justify-center p-6 rounded-2xl border-2
                     transition-all duration-300 transform hover:scale-105 active:scale-95
                     ${plataforma === '99'
-                      ? 'border-[#FFCC00] bg-[#FFCC00] text-black shadow-lg'
-                      : 'border-gray-200 bg-white hover:border-[#FFCC00] hover:shadow-md'}
+                      ? 'border-[#ff8200] bg-gradient-to-br from-[#fd0] to-[#ff8200] text-black shadow-lg'
+                      : 'border-gray-200 bg-white hover:border-[#ff8200] hover:shadow-md'}
                   `}
                 >
                   <div className="w-20 h-20 mb-3 flex items-center justify-center">
