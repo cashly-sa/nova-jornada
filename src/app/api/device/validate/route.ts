@@ -16,10 +16,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Primeiro, verificar se já foi validado (idempotência)
+    // Primeiro, verificar estado atual da jornada
     const { data: existingJourney, error: fetchError } = await supabase
       .from('device_modelo')
-      .select('device_checked_at, modelo, valor_aprovado, "Aprovado CEL"')
+      .select('device_checked_at, modelo, valor_aprovado, "Aprovado CEL", device_attempts')
       .eq('id', journeyId)
       .single()
 
@@ -31,16 +31,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Se já foi validado, retorna resultado anterior (idempotente)
-    if (existingJourney.device_checked_at) {
+    // Se já foi validado E aprovado, retorna resultado anterior (idempotente)
+    // Se foi rejeitado anteriormente, permite nova tentativa
+    if (existingJourney.device_checked_at && existingJourney['Aprovado CEL']) {
       return NextResponse.json({
-        eligible: existingJourney['Aprovado CEL'],
+        eligible: true,
         valorAprovado: existingJourney.valor_aprovado,
         modelo: existingJourney.modelo,
         alreadyChecked: true,
-        message: 'Device já verificado anteriormente',
+        message: 'Device já verificado e aprovado anteriormente',
       })
     }
+
+    // Contador de tentativas atual e modelo anterior
+    const currentAttempts = existingJourney.device_attempts || 0
+    const previousModelo = existingJourney.modelo
 
     // Verificar elegibilidade usando regex patterns
     const eligibilityResult = await checkDeviceEligibility(modelo, fabricante)
@@ -49,31 +54,47 @@ export async function POST(request: NextRequest) {
     const valorAprovado = eligibilityResult.valorAprovado || null
     const nomeComercial = eligibilityResult.nomeComercial || null
 
-    // Atualizar device_modelo com CAS (Compare-And-Swap)
-    // Só atualiza se device_checked_at ainda for NULL
+    // Lógica de device_attempts:
+    // - Mesmo modelo + não elegível: incrementa (tentativa repetida)
+    // - Modelo diferente + não elegível: reseta para 1 (nova tentativa com outro device)
+    // - Elegível (aprovado): reseta para 0 (sucesso)
+    const isSameModel = previousModelo === modelo
+    let newAttempts: number
+    if (eligible) {
+      newAttempts = 0 // Sucesso - reseta contador
+    } else if (isSameModel) {
+      newAttempts = currentAttempts + 1 // Mesmo modelo rejeitado - incrementa
+    } else {
+      newAttempts = 1 // Modelo diferente rejeitado - primeira tentativa com este device
+    }
+
+    // Preparar dados de atualização
     const updateData: Record<string, unknown> = {
       modelo,
       fabricante,
       user_agent: userAgent,
-      device_checked_at: new Date().toISOString(),
       'Aprovado CEL': eligible,
+      device_attempts: newAttempts,
     }
 
     if (eligible) {
+      // Device aprovado - marcar como verificado e avançar
+      updateData.device_checked_at = new Date().toISOString()
       updateData.valor_aprovado = valorAprovado
       updateData.jornada_step = '03'
     } else {
-      updateData.status = 'rejected'
+      // Device rejeitado - NÃO muda status, permite nova tentativa
+      // device_checked_at fica NULL para permitir nova verificação
+      updateData.device_checked_at = null
       updateData.rejection_reason = 'device_not_eligible'
-      updateData.jornada_step = 'rejected'
+      updateData.jornada_step = '02' // Permanece no step 02 (device)
+      // status permanece 'in_progress'
     }
 
-    const { data: updateResult, error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from('device_modelo')
       .update(updateData)
       .eq('id', journeyId)
-      .is('device_checked_at', null)  // CAS: só atualiza se ainda não foi verificado
-      .select()
 
     if (updateError) {
       console.error('Erro ao atualizar device_modelo:', updateError)
@@ -83,30 +104,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Se não atualizou nenhum registro, significa que foi verificado por outra requisição
-    if (!updateResult || updateResult.length === 0) {
-      // Buscar resultado atual e retornar
-      const { data: currentJourney } = await supabase
-        .from('device_modelo')
-        .select('modelo, valor_aprovado, "Aprovado CEL"')
-        .eq('id', journeyId)
-        .single()
-
-      return NextResponse.json({
-        eligible: currentJourney?.['Aprovado CEL'],
-        valorAprovado: currentJourney?.valor_aprovado,
-        modelo: currentJourney?.modelo,
-        alreadyChecked: true,
-        message: 'Device verificado por outra requisição',
-      })
-    }
-
-    // Log do evento (só se realmente atualizou)
+    // Log do evento
     await logJourneyEvent(
       journeyId,
-      eligible ? 'step_completed' : 'rejection',
-      '02',
-      { modelo, fabricante, eligible, valorAprovado }
+      eligible ? 'step_completed' : 'device_rejected',
+      'device',
+      { modelo, fabricante, eligible, valorAprovado, attempts: newAttempts }
     )
 
     return NextResponse.json({
@@ -114,6 +117,8 @@ export async function POST(request: NextRequest) {
       valorAprovado,
       nomeComercial,
       modelo,
+      attempts: newAttempts,
+      canRetry: !eligible, // Se não elegível, pode tentar novamente
     })
 
   } catch (error) {

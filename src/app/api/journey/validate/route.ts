@@ -25,9 +25,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se jornada ainda está em progresso
+    // Nota: device rejeitado NÃO muda status - usuário pode tentar outro device
     if (journey.status !== 'in_progress') {
+      // Retornar motivo específico baseado no status
+      const reasonMap: Record<string, string> = {
+        completed: 'journey_completed',
+        expired: 'journey_expired',
+        abandoned: 'journey_abandoned',
+      }
+      const reason = reasonMap[journey.status] || 'journey_completed'
+
       return NextResponse.json(
-        { valid: false, reason: 'journey_completed' },
+        { valid: false, reason, status: journey.status },
         { status: 400 }
       )
     }
@@ -58,6 +67,16 @@ export async function POST(request: NextRequest) {
       Blacklist: boolean
     } | null
 
+    // Debug log para verificar o que está sendo retornado
+    console.log('🔍 [Validate API] Retornando jornada:', {
+      id: journey.id,
+      step: journey.jornada_step,
+      status: journey.status,
+      deviceAttempts: journey.device_attempts,
+      deviceApproved: journey['Aprovado CEL'],
+      modelo: journey.modelo,
+    })
+
     return NextResponse.json({
       valid: true,
       journey: {
@@ -79,6 +98,8 @@ export async function POST(request: NextRequest) {
         valorAprovado: journey.valor_aprovado,
         knoxImei: journey.knox_imei,
         contratoId: journey.contrato_id,
+        deviceAttempts: journey.device_attempts || 0,
+        deviceApproved: journey['Aprovado CEL'] || false,
       },
     })
   } catch (error) {

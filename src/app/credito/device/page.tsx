@@ -33,6 +33,7 @@ function DevicePageContent() {
   const [error, setError] = useState('')
   const [isCompleted, setIsCompleted] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [attempts, setAttempts] = useState(0)
 
   // Ref para evitar chamadas duplicadas (React StrictMode)
   const hasValidated = useRef(false)
@@ -45,13 +46,78 @@ function DevicePageContent() {
   // Link compartilhável (placeholder fake por enquanto)
   const shareableLink = `https://cashly.app/c/${token?.slice(0, 8) || 'demo'}${token ? token.slice(-4) : ''}`
 
-  // Detectar dispositivo automaticamente (apenas uma vez, após hidratação)
+  // Verificar estado anterior e decidir se precisa validar novamente
   useEffect(() => {
-    if (hydrated && journeyId && !hasValidated.current) {
+    if (hydrated && journeyId && token && !hasValidated.current) {
       hasValidated.current = true
+      checkPreviousState()
+    }
+  }, [hydrated, journeyId, token]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Verificar se já existe resultado anterior
+  const checkPreviousState = async () => {
+    console.log('🔍 [Device] checkPreviousState iniciado')
+
+    try {
+      // Buscar estado atual da jornada
+      const response = await fetch('/api/journey/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+
+      const data = await response.json()
+
+      console.log('🔍 [Device] Resposta validate:', JSON.stringify({
+        valid: data.valid,
+        deviceApproved: data.journey?.deviceApproved,
+        deviceAttempts: data.journey?.deviceAttempts,
+        deviceInfo: data.journey?.deviceInfo,
+      }))
+
+      if (data.valid && data.journey) {
+        const { deviceApproved, deviceAttempts, deviceInfo, valorAprovado: savedValor } = data.journey
+
+        console.log('🔍 [Device] Verificando condições:', {
+          deviceApproved,
+          deviceAttempts,
+          hasDeviceInfo: !!deviceInfo,
+          conditionApproved: deviceApproved && deviceInfo,
+          conditionRejected: deviceAttempts > 0 && !deviceApproved,
+        })
+
+        // Se device já foi verificado e APROVADO, mostrar resultado
+        if (deviceApproved && deviceInfo) {
+          console.log('✅ [Device] Device aprovado anteriormente')
+          setDeviceName(deviceInfo.modelo)
+          setValor(savedValor)
+          setValorAprovado(savedValor)
+          setStatus('eligible')
+          return
+        }
+
+        // Se device foi verificado mas REJEITADO, mostrar tela de rejeitado
+        // deviceInfo pode não estar presente se o modelo não foi salvo corretamente
+        if (deviceAttempts > 0 && !deviceApproved) {
+          console.log('❌ [Device] Device rejeitado anteriormente, tentativas:', deviceAttempts)
+          if (deviceInfo) {
+            setDeviceName(deviceInfo.modelo)
+          }
+          setAttempts(deviceAttempts)
+          setStatus('not_eligible')
+          return
+        }
+      }
+
+      // Se não tem resultado anterior, fazer detecção normal
+      console.log('🔄 [Device] Nenhum estado anterior, chamando detectAndValidate()')
+      detectAndValidate()
+    } catch (err) {
+      console.error('❌ [Device] Erro ao verificar estado anterior:', err)
+      // Em caso de erro, tentar detecção normal
       detectAndValidate()
     }
-  }, [hydrated, journeyId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   const detectAndValidate = async () => {
     setStatus('detecting')
@@ -91,6 +157,7 @@ function DevicePageContent() {
         setStatus('eligible')
       } else {
         setDeviceName(deviceInfo.modelo)
+        setAttempts(data.attempts || 1)
         setStatus('not_eligible')
       }
 
@@ -139,15 +206,44 @@ function DevicePageContent() {
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(shareableLink)
+      // Tentar usar Clipboard API moderna
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareableLink)
+      } else {
+        // Fallback para dispositivos sem suporte
+        const textArea = document.createElement('textarea')
+        textArea.value = shareableLink
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-9999px'
+        document.body.appendChild(textArea)
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+      }
+
       setCopied(true)
+
+      // Log evento (fire-and-forget via Beacon API)
       logEvent('link_copied', { link: shareableLink })
 
       // Reset após 2s
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Erro ao copiar:', err)
+      // Mostrar feedback mesmo se falhar
+      alert('Não foi possível copiar. Link: ' + shareableLink)
     }
+  }
+
+  const handleWhatsAppShare = () => {
+    const text = encodeURIComponent(`Olha esse link para solicitar crédito na Cashly: ${shareableLink}`)
+    const whatsappUrl = `https://wa.me/?text=${text}`
+
+    // Log evento (fire-and-forget via Beacon API)
+    logEvent('link_shared', { method: 'whatsapp' })
+
+    // Abrir WhatsApp
+    window.open(whatsappUrl, '_blank')
   }
 
   const handleShareLink = async () => {
@@ -158,6 +254,7 @@ function DevicePageContent() {
           text: 'Use esse link para solicitar crédito:',
           url: shareableLink,
         })
+        // Log evento (fire-and-forget via Beacon API)
         logEvent('link_shared', { method: 'native_share' })
       } catch (err) {
         // Usuário cancelou ou erro
@@ -226,9 +323,20 @@ function DevicePageContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <h1 className="text-xl font-bold text-text-primary mb-6">
+              <h1 className="text-xl font-bold text-text-primary mb-2">
                 Infelizmente seu modelo de celular não é elegível
               </h1>
+              {deviceName && (
+                <p className="text-text-secondary text-sm mb-2">
+                  Modelo detectado: <span className="font-medium">{deviceName}</span>
+                </p>
+              )}
+              {attempts > 0 && (
+                <p className="text-text-secondary text-sm mb-6">
+                  Tentativa {attempts}
+                </p>
+              )}
+              {!attempts && <div className="mb-6" />}
               <button
                 onClick={handleTryAnotherDevice}
                 className="btn-primary"
@@ -248,11 +356,11 @@ function DevicePageContent() {
               </div>
 
               {/* Título */}
-              <h1 className="page-title">Compartilhe o link</h1>
+              <h1 className="page-title">Use esse link em outro aparelho</h1>
 
               {/* Mensagem */}
               <p className="text-text-secondary mb-6">
-                Use esse link para tentar aprovação em outro modelo de celular
+                Não aceitamos Iphone e modelos antigos e obsoletos.
               </p>
 
               {/* Caixa do link estilo Pix */}
@@ -275,6 +383,7 @@ function DevicePageContent() {
 
               {/* Botões */}
               <div className="space-y-3">
+                {/* Copiar Link - Botão primário */}
                 <button
                   onClick={handleCopyLink}
                   className="btn-primary flex items-center justify-center gap-2"
@@ -285,14 +394,16 @@ function DevicePageContent() {
                   {copied ? 'Link copiado!' : 'Copiar Link'}
                 </button>
 
+                {/* WhatsApp - Botão secundário verde */}
                 <button
-                  onClick={handleShareLink}
-                  className="btn-secondary flex items-center justify-center gap-2"
+                  onClick={handleWhatsAppShare}
+                  className="w-full py-3 px-4 rounded-xl font-semibold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                  style={{ backgroundColor: '#25D366' }}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                   </svg>
-                  Compartilhar Link
+                  Compartilhar pelo WhatsApp
                 </button>
               </div>
             </div>
