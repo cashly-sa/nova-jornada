@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, logJourneyEvent, checkDeviceEligibility } from '@/lib/supabase'
+import { STEP_NAMES } from '@/types/journey.types'
 
 /**
  * Valida device de forma IDEMPOTENTE usando Compare-And-Swap.
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
     await logJourneyEvent(
       journeyId,
       eligible ? 'step_completed' : 'device_rejected',
-      'device',
+      STEP_NAMES.DEVICE,
       { modelo, fabricante, eligible, valorAprovado, attempts: newAttempts }
     )
 

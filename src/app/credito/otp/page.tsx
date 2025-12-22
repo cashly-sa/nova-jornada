@@ -9,6 +9,7 @@ import { useJourneyStore, useHydration } from '@/store/journey.store'
 import { maskPhone } from '@/utils/validators'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
+import { STEP_NAMES } from '@/types/journey.types'
 
 export default function OTPPage() {
   const router = useRouter()
@@ -26,7 +27,7 @@ export default function OTPPage() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   // Rastrear abandono - só dispara se não verificou OTP
-  useAbandonmentTracker(journeyId, '01', isCompleted)
+  useAbandonmentTracker(journeyId, STEP_NAMES.OTP, isCompleted)
   useHeartbeat()
   const hasSentOTP = useRef(false)
 

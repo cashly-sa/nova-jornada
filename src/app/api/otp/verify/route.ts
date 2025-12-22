@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, logJourneyEvent } from '@/lib/supabase'
 import { hashOTPCode } from '@/lib/clicksend'
+import { STEP_NAMES } from '@/types/journey.types'
 
 /**
  * Verifica código OTP de forma ATÔMICA usando função PostgreSQL.
@@ -158,7 +159,7 @@ async function verifyOTPFallback(journeyId: number, codeHash: string) {
     .eq('id', journeyId)
 
   // 6. Logar evento
-  await logJourneyEvent(journeyId, 'otp_verified', '01')
+  await logJourneyEvent(journeyId, 'otp_verified', STEP_NAMES.OTP)
 
   console.log('[OTP Fallback] Verificação concluída com sucesso')
 

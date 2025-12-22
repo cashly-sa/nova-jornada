@@ -77,6 +77,19 @@ export interface JourneyData {
   contratoSignedAt?: string
 }
 
+// Constantes de step para uso em logging/tracking (evita strings mágicas)
+export const STEP_NAMES = {
+  CPF: '00',
+  CADASTRO: '00b',
+  OTP: '01',
+  DEVICE: '02',
+  RENDA: '03',
+  OFERTA: '04',
+  KNOX: '05',
+  CONTRATO: '06',
+  SUCESSO: '07',
+} as const
+
 // Steps ordenados para barra de progresso
 export const JOURNEY_STEPS: { key: JourneyStep; label: string }[] = [
   { key: '00', label: 'CPF' },

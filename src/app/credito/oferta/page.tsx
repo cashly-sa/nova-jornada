@@ -12,6 +12,7 @@ import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
+import { STEP_NAMES } from '@/types/journey.types'
 
 export default function OfertaPage() {
   return (
@@ -31,9 +32,9 @@ function OfertaPageContent() {
   const pageLoadTime = useRef<number>(Date.now())
 
   // Hooks de tracking
-  const { logEvent, trackClick, trackStepCompleted } = useEventTracker('04')
-  useVisibilityTracker('04')
-  useAbandonmentTracker(journeyId, '04', isCompleted)
+  const { logEvent, trackClick, trackStepCompleted } = useEventTracker(STEP_NAMES.OFERTA)
+  useVisibilityTracker(STEP_NAMES.OFERTA)
+  useAbandonmentTracker(journeyId, STEP_NAMES.OFERTA, isCompleted)
   useHeartbeat()
 
   // Logar visualização da oferta

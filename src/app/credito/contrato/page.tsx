@@ -12,6 +12,7 @@ import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
+import { STEP_NAMES } from '@/types/journey.types'
 
 export default function ContratoPage() {
   return (
@@ -32,9 +33,9 @@ function ContratoPageContent() {
   const termsRef = useRef<HTMLDivElement>(null)
 
   // Hooks de tracking
-  const { logEvent, trackClick, trackCheckbox, trackStepCompleted } = useEventTracker('06')
-  useVisibilityTracker('06')
-  useAbandonmentTracker(journeyId, '06', isCompleted)
+  const { logEvent, trackClick, trackCheckbox, trackStepCompleted } = useEventTracker(STEP_NAMES.CONTRATO)
+  useVisibilityTracker(STEP_NAMES.CONTRATO)
+  useAbandonmentTracker(journeyId, STEP_NAMES.CONTRATO, isCompleted)
   useHeartbeat()
 
   // Logar visualização do contrato

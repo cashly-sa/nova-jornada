@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { sendSMS, generateOTPCode, hashOTPCode } from '@/lib/clicksend'
+import { STEP_NAMES } from '@/types/journey.types'
 
 export async function POST(request: NextRequest) {
   try {
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
       .insert({
         device_modelo_id: journeyId,
         event_type: 'otp_sent',
-        step_name: '01',
+        step_name: STEP_NAMES.OTP,
         metadata: { success: smsResult.success },
       })
 

@@ -11,6 +11,7 @@ import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
+import { STEP_NAMES } from '@/types/journey.types'
 
 // Logo Uber (wordmark oficial)
 function UberLogo({ color = 'black' }: { color?: 'black' | 'white' }) {
@@ -60,9 +61,9 @@ function RendaPageContent() {
   const [isCompleted, setIsCompleted] = useState(false)
 
   // Hooks de tracking
-  const { logEvent, trackClick, trackStepCompleted } = useEventTracker('03')
-  useVisibilityTracker('03')
-  useAbandonmentTracker(journeyId, '03', isCompleted)
+  const { logEvent, trackClick, trackStepCompleted } = useEventTracker(STEP_NAMES.RENDA)
+  useVisibilityTracker(STEP_NAMES.RENDA)
+  useAbandonmentTracker(journeyId, STEP_NAMES.RENDA, isCompleted)
   useHeartbeat()
 
   const handleSelect = async (selected: 'uber' | '99') => {

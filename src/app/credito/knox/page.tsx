@@ -12,6 +12,7 @@ import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
+import { STEP_NAMES } from '@/types/journey.types'
 
 const steps = [
   {
@@ -54,9 +55,9 @@ function KnoxPageContent() {
   const [isCompleted, setIsCompleted] = useState(false)
 
   // Hooks de tracking
-  const { logEvent, trackClick, trackInputFocus, trackFormError, trackLinkClick, trackStepCompleted } = useEventTracker('05')
-  useVisibilityTracker('05')
-  useAbandonmentTracker(journeyId, '05', isCompleted)
+  const { logEvent, trackClick, trackInputFocus, trackFormError, trackLinkClick, trackStepCompleted } = useEventTracker(STEP_NAMES.KNOX)
+  useVisibilityTracker(STEP_NAMES.KNOX)
+  useAbandonmentTracker(journeyId, STEP_NAMES.KNOX, isCompleted)
   useHeartbeat()
 
   const handleImeiChange = (e: React.ChangeEvent<HTMLInputElement>) => {

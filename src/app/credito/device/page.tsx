@@ -11,6 +11,7 @@ import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { SessionGuard } from '@/components/SessionGuard'
+import { STEP_NAMES } from '@/types/journey.types'
 
 type Status = 'detecting' | 'eligible' | 'not_eligible' | 'share_link' | 'error'
 
@@ -39,8 +40,8 @@ function DevicePageContent() {
   const hasValidated = useRef(false)
 
   // Hooks de tracking
-  const { logEvent, trackClick, trackStepCompleted } = useEventTracker('02')
-  useAbandonmentTracker(journeyId, '02', isCompleted)
+  const { logEvent, trackClick, trackStepCompleted } = useEventTracker(STEP_NAMES.DEVICE)
+  useAbandonmentTracker(journeyId, STEP_NAMES.DEVICE, isCompleted)
   useHeartbeat()
 
   // Link compartilhável (placeholder fake por enquanto)
