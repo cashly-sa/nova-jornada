@@ -9,7 +9,7 @@ import { useJourneyStore, useHydration } from '@/store/journey.store'
 import { maskPhone } from '@/utils/validators'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
-import { STEP_NAMES } from '@/types/journey.types'
+import { STEP_NAMES, getRouteForStep, JourneyStep } from '@/types/journey.types'
 
 export default function OTPPage() {
   const router = useRouter()
@@ -195,8 +195,16 @@ export default function OTPPage() {
       // Sucesso - marcar como completado antes de navegar
       setIsCompleted(true)
       setOtpVerified(true)
-      setStep('02')
-      router.push('/credito/device')
+
+      // Usar step retornado pela API para redirecionar corretamente
+      // Isso preserva o progresso quando OTP expira e usuário re-valida
+      const targetStep = (data.currentStep || '02') as JourneyStep
+      setStep(targetStep)
+
+      // Redirecionar para a rota correspondente ao step atual
+      const targetRoute = getRouteForStep(targetStep)
+      console.log('[OTP] Redirecionando para:', targetRoute, '(step:', targetStep, ')')
+      router.push(targetRoute)
 
     } catch (err) {
       setError('Erro ao verificar código')

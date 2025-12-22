@@ -79,9 +79,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Buscar step atual da jornada para redirecionamento correto
+    const { data: journeyData } = await supabase
+      .from('device_modelo')
+      .select('jornada_step')
+      .eq('id', journeyId)
+      .single()
+
+    const currentStep = journeyData?.jornada_step || '02'
+
     return NextResponse.json({
       success: true,
       message: result.message,
+      currentStep, // Retornar step atual para redirecionamento correto
     })
 
   } catch (error) {
@@ -149,22 +159,31 @@ async function verifyOTPFallback(journeyId: number, codeHash: string) {
     .update({ used: true })
     .eq('id', otpRecord.id)
 
-  // 5. Atualizar jornada
+  // 5. Buscar step atual da jornada ANTES de atualizar
+  const { data: journeyData } = await supabase
+    .from('device_modelo')
+    .select('jornada_step')
+    .eq('id', journeyId)
+    .single()
+
+  const currentStep = journeyData?.jornada_step || '02'
+
+  // 6. Atualizar jornada - NÃO alterar jornada_step, apenas otp_verified_at
   await supabase
     .from('device_modelo')
     .update({
-      jornada_step: '02',
       otp_verified_at: new Date().toISOString(),
     })
     .eq('id', journeyId)
 
-  // 6. Logar evento
+  // 7. Logar evento
   await logJourneyEvent(journeyId, 'otp_verified', STEP_NAMES.OTP)
 
-  console.log('[OTP Fallback] Verificação concluída com sucesso')
+  console.log('[OTP Fallback] Verificação concluída com sucesso, step atual:', currentStep)
 
   return NextResponse.json({
     success: true,
     message: 'Código verificado com sucesso',
+    currentStep, // Retornar step atual para redirecionamento correto
   })
 }
