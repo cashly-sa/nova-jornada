@@ -86,7 +86,18 @@ export async function POST(request: NextRequest) {
       .eq('id', journeyId)
       .single()
 
-    const currentStep = journeyData?.jornada_step || '02'
+    let currentStep = journeyData?.jornada_step || '02'
+
+    // Se o step ainda é '01' (OTP), avançar para '02' (Device)
+    // Isso só acontece na primeira verificação, não em re-validações
+    if (currentStep === '01') {
+      currentStep = '02'
+      await supabase
+        .from('device_modelo')
+        .update({ jornada_step: '02' })
+        .eq('id', journeyId)
+      console.log('[OTP Verify] Avançando step de 01 para 02')
+    }
 
     return NextResponse.json({
       success: true,
@@ -166,14 +177,23 @@ async function verifyOTPFallback(journeyId: number, codeHash: string) {
     .eq('id', journeyId)
     .single()
 
-  const currentStep = journeyData?.jornada_step || '02'
+  let currentStep = journeyData?.jornada_step || '02'
 
-  // 6. Atualizar jornada - NÃO alterar jornada_step, apenas otp_verified_at
+  // 6. Se o step ainda é '01' (OTP), avançar para '02' (Device)
+  // Isso só acontece na primeira verificação, não em re-validações
+  const updateData: { otp_verified_at: string; jornada_step?: string } = {
+    otp_verified_at: new Date().toISOString(),
+  }
+
+  if (currentStep === '01') {
+    currentStep = '02'
+    updateData.jornada_step = '02'
+    console.log('[OTP Fallback] Avançando step de 01 para 02')
+  }
+
   await supabase
     .from('device_modelo')
-    .update({
-      otp_verified_at: new Date().toISOString(),
-    })
+    .update(updateData)
     .eq('id', journeyId)
 
   // 7. Logar evento
