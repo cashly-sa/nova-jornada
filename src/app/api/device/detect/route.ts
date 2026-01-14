@@ -110,6 +110,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      // Dados de rastreamento
+      detection_source: '51degrees',
+      detection_confidence: 95, // 51Degrees tem alta precisão
       // Dados principais (compatibilidade)
       device: {
         modelo: hardwareModel,

@@ -8,7 +8,14 @@ import { STEP_NAMES } from '@/types/journey.types'
  */
 export async function POST(request: NextRequest) {
   try {
-    const { journeyId, modelo, fabricante, userAgent } = await request.json()
+    const {
+      journeyId,
+      modelo,
+      fabricante,
+      userAgent,
+      detection_source,    // Camada que detectou o device
+      detection_confidence // Score de confiança (0-100)
+    } = await request.json()
 
     if (!journeyId || !modelo) {
       return NextResponse.json(
@@ -76,6 +83,9 @@ export async function POST(request: NextRequest) {
       user_agent: userAgent,
       'Aprovado CEL': eligible,
       device_attempts: newAttempts,
+      // Campos de rastreamento de detecção
+      detection_source: detection_source || 'unknown',
+      detection_confidence: detection_confidence || 0,
     }
 
     if (eligible) {

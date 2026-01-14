@@ -139,6 +139,8 @@ function DevicePageContent() {
           modelo: deviceInfo.modelo,
           fabricante: deviceInfo.fabricante,
           userAgent: deviceInfo.userAgent,
+          detection_source: deviceInfo.detection_source,
+          detection_confidence: deviceInfo.detection_confidence,
         }),
       })
 

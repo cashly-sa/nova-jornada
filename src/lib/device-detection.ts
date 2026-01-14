@@ -4,6 +4,8 @@ export interface DeviceInfo {
   modelo: string
   fabricante: string
   userAgent: string
+  detection_source: '51degrees' | 'client_hints_high' | 'client_hints_low' | 'user_agent'
+  detection_confidence: number // 0-100
 }
 
 // Declaração de tipos para Client Hints API
@@ -49,7 +51,9 @@ export async function detectDevice(): Promise<DeviceInfo> {
         return {
           modelo: hints.model,
           fabricante: hints.platform || 'unknown',
-          userAgent
+          userAgent,
+          detection_source: 'client_hints_high',
+          detection_confidence: 75
         }
       }
     } catch (err) {
@@ -69,7 +73,9 @@ function parseUserAgent(ua: string): DeviceInfo {
     return {
       modelo: 'iPhone',
       fabricante: 'Apple',
-      userAgent: ua
+      userAgent: ua,
+      detection_source: 'user_agent',
+      detection_confidence: 60 // Apple não revela modelo específico
     }
   }
 
@@ -78,7 +84,9 @@ function parseUserAgent(ua: string): DeviceInfo {
     return {
       modelo: 'iPad',
       fabricante: 'Apple',
-      userAgent: ua
+      userAgent: ua,
+      detection_source: 'user_agent',
+      detection_confidence: 60
     }
   }
 
@@ -87,7 +95,9 @@ function parseUserAgent(ua: string): DeviceInfo {
     return {
       modelo: 'Mac',
       fabricante: 'Apple',
-      userAgent: ua
+      userAgent: ua,
+      detection_source: 'user_agent',
+      detection_confidence: 60
     }
   }
 
@@ -99,7 +109,9 @@ function parseUserAgent(ua: string): DeviceInfo {
     return {
       modelo: samsungMatch[0].toUpperCase(),
       fabricante: 'Samsung',
-      userAgent: ua
+      userAgent: ua,
+      detection_source: 'user_agent',
+      detection_confidence: 80 // Modelo específico extraído
     }
   }
 
@@ -109,7 +121,9 @@ function parseUserAgent(ua: string): DeviceInfo {
     return {
       modelo: motoMatch[0].trim(),
       fabricante: 'Motorola',
-      userAgent: ua
+      userAgent: ua,
+      detection_source: 'user_agent',
+      detection_confidence: 70
     }
   }
 
@@ -118,7 +132,9 @@ function parseUserAgent(ua: string): DeviceInfo {
     return {
       modelo: edgeMatch[0].trim(),
       fabricante: 'Motorola',
-      userAgent: ua
+      userAgent: ua,
+      detection_source: 'user_agent',
+      detection_confidence: 70
     }
   }
 
@@ -128,7 +144,9 @@ function parseUserAgent(ua: string): DeviceInfo {
     return {
       modelo: realmeMatch[0].toUpperCase(),
       fabricante: 'Realme',
-      userAgent: ua
+      userAgent: ua,
+      detection_source: 'user_agent',
+      detection_confidence: 75
     }
   }
 
@@ -138,7 +156,9 @@ function parseUserAgent(ua: string): DeviceInfo {
     return {
       modelo: oppoMatch[0].toUpperCase(),
       fabricante: 'OPPO',
-      userAgent: ua
+      userAgent: ua,
+      detection_source: 'user_agent',
+      detection_confidence: 75
     }
   }
 
@@ -148,7 +168,9 @@ function parseUserAgent(ua: string): DeviceInfo {
     return {
       modelo: infinixMatch[0],
       fabricante: 'Infinix',
-      userAgent: ua
+      userAgent: ua,
+      detection_source: 'user_agent',
+      detection_confidence: 70
     }
   }
 
@@ -159,7 +181,9 @@ function parseUserAgent(ua: string): DeviceInfo {
     return {
       modelo: redmiMatch[0].trim(),
       fabricante: 'Xiaomi',
-      userAgent: ua
+      userAgent: ua,
+      detection_source: 'user_agent',
+      detection_confidence: 70
     }
   }
 
@@ -169,7 +193,9 @@ function parseUserAgent(ua: string): DeviceInfo {
     return {
       modelo: pocoMatch[0].trim(),
       fabricante: 'Xiaomi',
-      userAgent: ua
+      userAgent: ua,
+      detection_source: 'user_agent',
+      detection_confidence: 70
     }
   }
 
@@ -180,7 +206,9 @@ function parseUserAgent(ua: string): DeviceInfo {
     return {
       modelo: xiaomiNumericMatch[1].toUpperCase(),
       fabricante: 'Xiaomi',
-      userAgent: ua
+      userAgent: ua,
+      detection_source: 'user_agent',
+      detection_confidence: 65
     }
   }
 
@@ -188,7 +216,9 @@ function parseUserAgent(ua: string): DeviceInfo {
   return {
     modelo: 'unknown',
     fabricante: 'unknown',
-    userAgent: ua
+    userAgent: ua,
+    detection_source: 'user_agent',
+    detection_confidence: 0 // Não conseguiu identificar
   }
 }
 
@@ -215,6 +245,8 @@ export async function detectDeviceWith51Degrees(): Promise<DeviceInfo> {
         modelo: data.device.modelo !== 'unknown' ? data.device.modelo : 'unknown',
         fabricante: data.device.fabricante !== 'unknown' ? data.device.fabricante : 'unknown',
         userAgent,
+        detection_source: data.detection_source || '51degrees',
+        detection_confidence: data.detection_confidence || 95,
       }
     }
 
