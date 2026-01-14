@@ -54,6 +54,7 @@ Para tarefas especificas, **consulte o arquivo correspondente antes de executar*
 | Identidade Visual | [docs/IDENTIDADE_VISUAL.md](docs/IDENTIDADE_VISUAL.md) | Cores, fontes, espacamentos |
 | Testes | [docs/TESTES.md](docs/TESTES.md) | Como testar, cobertura |
 | Seguranca | [docs/SEGURANCA.md](docs/SEGURANCA.md) | Auth, permissoes |
+| Device Detection | [docs/DEVICE_DETECTION.md](docs/DEVICE_DETECTION.md) | Camadas de deteccao, 51Degrees |
 
 ## Comandos Essenciais
 
@@ -109,4 +110,4 @@ npm run lint     # Verificar codigo com ESLint
 
 ---
 
-*Ultima atualizacao: 2025-12-22*
+*Ultima atualizacao: 2025-01-14*
