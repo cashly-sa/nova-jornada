@@ -45,6 +45,8 @@ interface Layer1Data {
     hasClientHints: boolean
     clientHintsReceived?: string[]
   }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  raw?: any // Resposta bruta da API para debug
 }
 
 interface Layer2Data {
@@ -235,6 +237,7 @@ export default function TesteDevicePage() {
             loading: false,
             fullData: data.fullData,
             debug: data.debug,
+            raw: data.raw, // Resposta bruta para debug
           })
         } else {
           setLayer1({
@@ -416,6 +419,20 @@ export default function TesteDevicePage() {
                       CH recebidos: {layer1.debug.clientHintsReceived.join(', ')}
                     </p>
                   )}
+                </Section>
+              )}
+
+              {/* RAW Response */}
+              {layer1.raw && (
+                <Section title="Resposta RAW (51Degrees)">
+                  <details className="text-xs">
+                    <summary className="text-blue-600 cursor-pointer font-semibold mb-2">
+                      Clique para expandir JSON completo
+                    </summary>
+                    <pre className="bg-gray-100 rounded-lg p-3 overflow-x-auto text-gray-600 whitespace-pre-wrap">
+                      {JSON.stringify(layer1.raw, null, 2)}
+                    </pre>
+                  </details>
                 </Section>
               )}
             </>
