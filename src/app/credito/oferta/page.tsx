@@ -12,6 +12,7 @@ import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
+import { usePreventBackNavigation } from '@/hooks/usePreventBackNavigation'
 import { STEP_NAMES } from '@/types/journey.types'
 
 export default function OfertaPage() {
@@ -36,6 +37,7 @@ function OfertaPageContent() {
   useVisibilityTracker(STEP_NAMES.OFERTA)
   useAbandonmentTracker(journeyId, STEP_NAMES.OFERTA, isCompleted)
   useHeartbeat()
+  usePreventBackNavigation()
 
   // Logar visualização da oferta
   useEffect(() => {
@@ -73,7 +75,7 @@ function OfertaPageContent() {
       trackStepCompleted()
       setIsCompleted(true)
       setStep('05')
-      router.push('/credito/knox')
+      router.replace('/credito/knox')
 
     } catch (err) {
       console.error('Erro ao aceitar oferta:', err)
@@ -90,7 +92,7 @@ function OfertaPageContent() {
     trackClick('reject_offer', 'Não tenho interesse')
     logEvent('oferta_rejected', { tempo_decisao_seconds: tempoDecisao })
 
-    router.push('/')
+    router.replace('/')
   }
 
   // Cálculos de exemplo

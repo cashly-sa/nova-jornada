@@ -12,6 +12,7 @@ import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
+import { usePreventBackNavigation } from '@/hooks/usePreventBackNavigation'
 import { STEP_NAMES } from '@/types/journey.types'
 
 export default function ContratoPage() {
@@ -37,6 +38,7 @@ function ContratoPageContent() {
   useVisibilityTracker(STEP_NAMES.CONTRATO)
   useAbandonmentTracker(journeyId, STEP_NAMES.CONTRATO, isCompleted)
   useHeartbeat()
+  usePreventBackNavigation()
 
   // Logar visualização do contrato
   useEffect(() => {
@@ -100,7 +102,7 @@ function ContratoPageContent() {
 
     setIsCompleted(true)
     setStep('07')
-    router.push('/credito/sucesso')
+    router.replace('/credito/sucesso')
 
     setIsLoading(false)
   }

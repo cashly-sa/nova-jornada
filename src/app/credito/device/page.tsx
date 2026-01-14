@@ -6,10 +6,11 @@ import { MobileOnly } from '@/components/MobileOnly'
 import { CashlyLogo } from '@/components/CashlyLogo'
 import { JourneyProgress } from '@/components/JourneyProgress'
 import { useJourneyStore, useHydration } from '@/store/journey.store'
-import { detectDevice } from '@/lib/device-detection'
+import { detectDeviceWith51Degrees } from '@/lib/device-detection'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
 import { useEventTracker } from '@/hooks/useEventTracker'
+import { usePreventBackNavigation } from '@/hooks/usePreventBackNavigation'
 import { SessionGuard } from '@/components/SessionGuard'
 import { STEP_NAMES } from '@/types/journey.types'
 
@@ -43,6 +44,7 @@ function DevicePageContent() {
   const { logEvent, trackClick, trackStepCompleted } = useEventTracker(STEP_NAMES.DEVICE)
   useAbandonmentTracker(journeyId, STEP_NAMES.DEVICE, isCompleted)
   useHeartbeat()
+  usePreventBackNavigation()
 
   // Link compartilhável (placeholder fake por enquanto)
   const shareableLink = `https://cashly.app/c/${token?.slice(0, 8) || 'demo'}${token ? token.slice(-4) : ''}`
@@ -125,8 +127,8 @@ function DevicePageContent() {
     setError('')
 
     try {
-      // Detectar dispositivo
-      const deviceInfo = await detectDevice()
+      // Detectar dispositivo usando 51Degrees API
+      const deviceInfo = await detectDeviceWith51Degrees()
 
       // Validar via API
       const response = await fetch('/api/device/validate', {
@@ -196,7 +198,7 @@ function DevicePageContent() {
 
     setIsCompleted(true)
     setStep('03')
-    router.push('/credito/renda')
+    router.replace('/credito/renda')
   }
 
   const handleTryAnotherDevice = () => {

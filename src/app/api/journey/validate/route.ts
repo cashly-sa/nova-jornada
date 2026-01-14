@@ -86,10 +86,9 @@ export async function POST(request: NextRequest) {
         otpVerifiedAt,
         leadData: lead ? {
           id: lead.id,
-          cpf: lead.cpf,
           nome: lead.nome,
-          telefone: lead.telefone,
-          blacklist: lead.Blacklist,
+          // SEGURANÇA: CPF e telefone removidos do response
+          // Acessar diretamente no banco quando necessário
         } : null,
         deviceInfo: journey.modelo ? {
           modelo: journey.modelo,

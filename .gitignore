@@ -40,8 +40,13 @@ next-env.d.ts
 *.swp
 *.swo
 
+# Claude Code
+.claude/
+
 # Jornada antiga (projeto separado)
 jornada_antiga/node_modules/
 jornada_antiga/.next/
 nul
 jornada_antiga/
+
+.vercel

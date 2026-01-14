@@ -4,11 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 4500",
+    "dev:lan": "next dev -p 4500 -H 0.0.0.0",
     "build": "next build",
     "start": "next start -p 4500",
     "lint": "next lint"
   },
   "dependencies": {
+    "@51degrees/ua-parser-js": "^2.0.3",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.2",

@@ -55,13 +55,13 @@ export function SessionGuard({
 
     // Sem sessão válida - redirecionar para início
     if (!isValid) {
-      router.push(redirectTo)
+      router.replace(redirectTo)
       return
     }
 
     // Precisa de OTP e não está na página de OTP
     if (needsOtp && requiredStep !== '01') {
-      router.push('/credito/otp')
+      router.replace('/credito/otp')
       return
     }
 
@@ -73,7 +73,7 @@ export function SessionGuard({
       // Não pode acessar step futuro
       if (requiredIndex > currentIndex) {
         // Redirecionar para o step atual
-        router.push(getRouteForStep(currentStep))
+        router.replace(getRouteForStep(currentStep))
         return
       }
     }

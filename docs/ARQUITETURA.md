@@ -1,43 +1,43 @@
-# Arquitetura - Jornada de Crédito Cashly
+# ARQUITETURA.md - Decisoes Tecnicas
 
-> **Versão:** 1.2
+> **Versao:** 1.2
 > **Data:** Dezembro 2024
 > **Status:** Aprovado para desenvolvimento
 
 ---
 
-## 1. Visão Geral
+## 1. Visao Geral
 
 ### 1.1 Problema Atual
 
-O cliente precisa baixar o APP para saber se é elegível para crédito. Isso causa:
-- Alta fricção no início da jornada
-- Baixa conversão (muitos desistem antes de baixar)
-- Custo de aquisição elevado
+O cliente precisa baixar o APP para saber se e elegivel para credito. Isso causa:
+- Alta friccao no inicio da jornada
+- Baixa conversao (muitos desistem antes de baixar)
+- Custo de aquisicao elevado
 
-### 1.2 Solução Proposta
+### 1.2 Solucao Proposta
 
-Jornada 100% web, contínua e sem fricção:
+Jornada 100% web, continua e sem friccao:
 - Entrada apenas por CPF (sem download de app)
-- Autenticação via OTP SMS (sem senha)
-- Validações em tempo real
-- Persistência de estado para retomada
+- Autenticacao via OTP SMS (sem senha)
+- Validacoes em tempo real
+- Persistencia de estado para retomada
 
-### 1.3 Princípios de Design
+### 1.3 Principios de Design
 
-| Princípio | Descrição |
+| Principio | Descricao |
 |-----------|-----------|
-| **Sem fricção** | Mínimo de etapas e inputs possíveis |
+| **Sem friccao** | Minimo de etapas e inputs possiveis |
 | **Mobile-first** | Otimizado para uso em celular |
-| **Recuperável** | Cliente pode sair e voltar sem perder progresso |
-| **Seguro** | Autenticação por OTP, dados criptografados |
-| **Rastreável** | Analytics completo de cada etapa |
+| **Recuperavel** | Cliente pode sair e voltar sem perder progresso |
+| **Seguro** | Autenticacao por OTP, dados criptografados |
+| **Rastreavel** | Analytics completo de cada etapa |
 
 ---
 
 ## 2. Arquitetura de Sistemas
 
-### 2.1 Visão Macro
+### 2.1 Visao Macro
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -55,32 +55,35 @@ Jornada 100% web, contínua e sem fricção:
 │       │                         │                        ▼                  │
 │       │                    ┌────┴────┐            ┌─────────────┐          │
 │       │                    │ Estado  │            │ PostgreSQL  │          │
-│       │                    │ (JWT +  │            │ (Supabase)  │          │
-│       │                    │ Zustand)│            └─────────────┘          │
-│       │                    └─────────┘                   │                  │
+│       │                    │ Zustand │            │ (Supabase)  │          │
+│       │                    └─────────┘            └─────────────┘          │
 │       │                                                  │                  │
 │       │                                                  ▼                  │
 │       │                                           ┌─────────────┐          │
 │       ▼                                           │  RPA Queue  │          │
 │  ┌─────────┐                                      │  (Uber/99)  │          │
-│  │   SMS   │◄─────────────────────────────────────┤             │          │
-│  │ (Twilio)│                                      └─────────────┘          │
+│  │   SMS   │◄─────────────────────────────────────│             │          │
+│  │ClickSend│                                      └─────────────┘          │
 │  └─────────┘                                                                │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 Stack Tecnológica
+### 2.2 Stack Tecnologica
 
-| Camada | Tecnologia | Justificativa |
-|--------|------------|---------------|
-| **Frontend** | Next.js 14 (App Router) | SSR, Edge Runtime, React Server Components |
-| **UI** | Tailwind + Shadcn/ui | Design system acessível e consistente |
-| **Estado Client** | Zustand + JWT | Leve, persistente no localStorage |
-| **Backend** | Supabase Edge Functions | Mesmo ecossistema, baixa latência |
-| **Database** | Supabase PostgreSQL | RLS, Realtime, já em uso |
-| **SMS** | Twilio ou AWS SNS | Confiabilidade e entrega rápida |
-| **RPA** | Python (existente) | Código já validado para Uber/99 |
+| Camada | Tecnologia | Versao | Justificativa |
+|--------|------------|--------|---------------|
+| Framework | Next.js | 15.5.9 | App Router, Edge Runtime |
+| UI | React | 19.0.0 | Server Components, Hooks |
+| Linguagem | TypeScript | 5.7.2 | Type safety |
+| Estilizacao | Tailwind CSS | 3.4.17 | Utility-first, mobile-first |
+| Estado | Zustand | 5.0.2 | Leve, persistente no localStorage |
+| Validacao | Zod | 3.24.1 | Runtime validation |
+| Forms | React Hook Form | 7.54.2 | Performance |
+| Banco | Supabase PostgreSQL | 2.47.10 | RLS, Realtime |
+| Componentes | Radix UI | - | Acessibilidade |
+| Icones | Lucide React | 0.468.0 | Consistencia |
+| SMS | ClickSend | - | Confiabilidade |
 
 ### 2.3 Sistemas Independentes
 
@@ -89,46 +92,73 @@ Jornada 100% web, contínua e sem fricção:
 │                    SISTEMAS COMPLETAMENTE SEPARADOS                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  SISTEMA 1: MGM (Member Get Member) - JÁ EXISTE                            │
-│  ══════════════════════════════════════════════                             │
+│  SISTEMA 1: MGM (Member Get Member) - JA EXISTE                            │
 │  • URL: mgm.cashly.com.br/{lead.token}                                     │
-│  • Propósito: Programa de indicações                                       │
+│  • Proposito: Programa de indicacoes                                       │
 │  • Campo usado: lead.token, lead.indicado_por                              │
-│  • Status: Produção - NÃO ALTERAR                                          │
+│  • Status: Producao - NAO ALTERAR                                          │
 │                                                                             │
 │  ─────────────────────────────────────────────────────────────────────     │
 │                                                                             │
-│  SISTEMA 2: JORNADA DE CRÉDITO - NOVO                                      │
-│  ════════════════════════════════════                                       │
+│  SISTEMA 2: JORNADA DE CREDITO - NOVO                                      │
 │  • URL: credito.cashly.com.br                                              │
 │  • URL direta: credito.cashly.com.br/j/{device_modelo.token}               │
-│  • Propósito: Avaliação e concessão de crédito                             │
+│  • Proposito: Avaliacao e concessao de credito                             │
 │  • Campo usado: device_modelo.token                                        │
 │  • Status: Em desenvolvimento                                              │
 │                                                                             │
-│  ⚠️  Os dois sistemas são INDEPENDENTES e não compartilham tokens          │
+│  ⚠️  Os dois sistemas sao INDEPENDENTES e nao compartilham tokens          │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 3. Modelo de Dados
+## 3. Estrutura de Pastas
 
-### 3.1 Decisão Arquitetural: Lead vs Jornada
+```
+src/
+├── app/                          # App Router (rotas e API)
+│   ├── layout.tsx               # Layout raiz (metadata, viewport)
+│   ├── page.tsx                 # Home - entrada CPF (Step 00)
+│   ├── cadastro/                # Cadastro novo cliente (Step 00b)
+│   ├── credito/                 # Jornada de credito
+│   │   ├── otp/page.tsx        # Verificacao OTP (Step 01)
+│   │   ├── device/page.tsx     # Elegibilidade dispositivo (Step 02)
+│   │   ├── renda/page.tsx      # Verificacao renda (Step 03)
+│   │   ├── oferta/page.tsx     # Exibicao oferta (Step 04)
+│   │   ├── knox/page.tsx       # Samsung Knox (Step 05)
+│   │   ├── contrato/page.tsx   # Assinatura contrato (Step 06)
+│   │   └── sucesso/page.tsx    # Sucesso (Step 07)
+│   ├── admin/devices/           # Painel admin
+│   └── api/                     # API Routes (backend)
+├── components/                   # Componentes reutilizaveis
+├── hooks/                        # Custom hooks
+├── lib/                          # Bibliotecas (supabase, sms, cep)
+├── store/                        # Estado global (Zustand)
+├── types/                        # Tipos TypeScript
+├── schemas/                      # Schemas Zod
+└── utils/                        # Utilitarios
+```
 
-**Problema:** Onde guardar os dados de aprovação e status da jornada?
+---
 
-**Decisão:** Separar em duas entidades:
-- `lead` = Dados cadastrais do cliente (imutável)
-- `device_modelo` = Cada tentativa de crédito (histórico)
+## 4. Modelo de Dados
+
+### 4.1 Decisao Arquitetural: Lead vs Jornada
+
+**Problema:** Onde guardar os dados de aprovacao e status da jornada?
+
+**Decisao:** Separar em duas entidades:
+- `lead` = Dados cadastrais do cliente (imutavel)
+- `device_modelo` = Cada tentativa de credito (historico)
 
 **Justificativa:**
-1. Um cliente pode ter múltiplas tentativas (trocou de celular, etc)
+1. Um cliente pode ter multiplas tentativas (trocou de celular, etc)
 2. Analytics de dropout precisa rastrear cada jornada individualmente
-3. Não poluir a tabela lead com flags temporários
+3. Nao poluir a tabela lead com flags temporarios
 
-### 3.2 Diagrama de Entidades
+### 4.2 Diagrama de Entidades
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -138,60 +168,54 @@ Jornada 100% web, contínua e sem fricção:
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                            LEAD                                      │   │
 │  │                     (Dados do Cliente)                               │   │
-│  │                     >>> NÃO ALTERAR <<<                              │   │
+│  │                     >>> NAO ALTERAR <<<                              │   │
 │  ├─────────────────────────────────────────────────────────────────────┤   │
 │  │  id (PK)                                                            │   │
-│  │  cpf (único) ← CHAVE DE BUSCA para iniciar jornada                  │   │
+│  │  cpf (unico) ← CHAVE DE BUSCA para iniciar jornada                  │   │
 │  │  telefone ← Para enviar OTP                                         │   │
 │  │  nome, email                                                        │   │
 │  │  Blacklist ← Bloqueia jornada se true                               │   │
-│  │  fcm_token ← Para notificações push                                 │   │
-│  │  token ← APENAS para MGM (não usar na jornada)                      │   │
-│  │  indicado_por ← APENAS para MGM                                     │   │
+│  │  token ← APENAS para MGM (nao usar na jornada)                      │   │
 │  └───────────────────────────┬─────────────────────────────────────────┘   │
 │                              │                                              │
-│                              │ 1:N (um lead, várias jornadas)              │
-│                              │                                              │
+│                              │ 1:N (um lead, varias jornadas)              │
 │                              ▼                                              │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
 │  │                       DEVICE_MODELO                                  │   │
-│  │              (Jornada de Crédito - Uma por tentativa)                │   │
+│  │              (Jornada de Credito - Uma por tentativa)                │   │
 │  ├─────────────────────────────────────────────────────────────────────┤   │
 │  │  id (PK)                                                            │   │
-│  │  token (único) ← Para URL direta da jornada                         │   │
+│  │  token (unico) ← Para URL direta da jornada                         │   │
 │  │  lead_id (FK)                                                       │   │
 │  │                                                                      │   │
 │  │  -- Controle da Jornada --                                          │   │
-│  │  jornada_step (inicio/otp/device/uber/offer/knox/contract/done)     │   │
-│  │  status (in_progress/completed/rejected/expired)                    │   │
+│  │  jornada_step ('00'|'01'|'02'|'03'|'04'|'05'|'06'|'07')            │   │
+│  │  status (pending|in_progress|completed|rejected|expired)            │   │
 │  │  expires_at                                                         │   │
 │  │                                                                      │   │
 │  │  -- Device Info --                                                  │   │
-│  │  modelo, nome_do_produto, versao_android, fabricante, marca         │   │
-│  │                                                                      │   │
-│  │  -- Aprovações (campos já existentes) --                            │   │
-│  │  "Aprovado CEL", uber, 99_taxi, aprovar_plano, etapa_garantia       │   │
+│  │  modelo, fabricante, "Aprovado CEL", valor_aprovado                 │   │
 │  │                                                                      │   │
 │  │  -- Dados Coletados --                                              │   │
-│  │  dados_uber (JSONB), dados_99 (JSONB), score_credito                │   │
-│  │  valor_aprovado, knox_imei, contrato_id                             │   │
+│  │  dados_uber (JSONB), dados_99 (JSONB), plataforma_escolhida         │   │
+│  │  score_credito, knox_imei, contrato_id                              │   │
 │  │                                                                      │   │
 │  │  -- Timestamps --                                                   │   │
-│  │  created_at, otp_verified_at, device_checked_at, uber_checked_at    │   │
-│  │  offer_accepted_at, knox_enrolled_at, contract_signed_at            │   │
+│  │  otp_verified_at, device_checked_at, uber_checked_at                │   │
+│  │  offer_shown_at, offer_accepted_at, knox_enrolled_at                │   │
+│  │  contrato_assinado_at, completed_at                                 │   │
 │  └───────────────────────────┬─────────────────────────────────────────┘   │
 │                              │                                              │
 │         ┌────────────────────┴────────────────────┐                        │
-│         │                                         │                        │
 │         ▼                                         ▼                        │
 │  ┌─────────────────────┐               ┌─────────────────────┐             │
 │  │     OTP_CODES       │               │   JOURNEY_EVENTS    │             │
-│  │  (Códigos SMS)      │               │    (Analytics)      │             │
+│  │  (Codigos SMS)      │               │    (Analytics)      │             │
 │  ├─────────────────────┤               ├─────────────────────┤             │
 │  │  device_modelo_id   │               │  device_modelo_id   │             │
 │  │  code_hash          │               │  event_type         │             │
 │  │  expires_at         │               │  step_name          │             │
-│  │  used               │               │  metadata (JSONB)   │             │
+│  │  used, attempts     │               │  metadata (JSONB)   │             │
 │  └─────────────────────┘               └─────────────────────┘             │
 │                                                                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
@@ -204,74 +228,45 @@ Jornada 100% web, contínua e sem fricção:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.3 Campos Existentes Aproveitados
-
-| Tabela | Campo | Uso na Jornada |
-|--------|-------|----------------|
-| lead | cpf | Busca do cliente na entrada |
-| lead | telefone | Envio de OTP |
-| lead | Blacklist | Bloqueio de acesso |
-| lead | fcm_token | Notificações push |
-| device_modelo | modelo | Modelo técnico do device |
-| device_modelo | "Aprovado CEL" | Flag de device aprovado |
-| device_modelo | uber | Flag de Uber validado |
-| device_modelo | 99_taxi | Flag de 99 validado |
-| device_modelo | aprovar_plano | Flag de oferta aceita |
-| device_modelo | valor_aprovado | Valor do empréstimo |
-| device_modelo | etapa_garantia | Flag de Knox OK |
-| device_modelo | etapa | Jornada concluída |
-
 ---
 
-## 4. Autenticação e Segurança
+## 5. Autenticacao e Seguranca
 
-### 4.1 Estratégia de Autenticação
+### 5.1 Estrategia de Autenticacao
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    AUTENTICAÇÃO SEM SENHA                                   │
+│                    AUTENTICACAO SEM SENHA                                   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  FLUXO:                                                                    │
 │                                                                             │
-│  [CPF] ──► [Busca Lead] ──► [Envia OTP] ──► [Valida OTP] ──► [Gera JWT]   │
+│  [CPF] ──► [Busca Lead] ──► [Envia OTP] ──► [Valida OTP] ──► [Sessao]     │
 │                                                                             │
 │  ─────────────────────────────────────────────────────────────────────     │
 │                                                                             │
-│  POR QUE OTP E NÃO MAGIC LINK?                                             │
+│  POR QUE OTP E NAO MAGIC LINK?                                             │
 │                                                                             │
-│  • Público-alvo: motoristas de app                                         │
-│  • Frequentemente usam dados móveis (SMS é mais direto)                    │
-│  • Muitos não usam email regularmente                                      │
-│  • SMS é familiar e rápido                                                 │
-│                                                                             │
-│  ─────────────────────────────────────────────────────────────────────     │
-│                                                                             │
-│  ESTRUTURA DO JWT:                                                         │
-│                                                                             │
-│  {                                                                          │
-│    "jti": "uuid-da-jornada",        // ID do device_modelo                 │
-│    "lid": 123,                       // ID do lead                          │
-│    "step": "device",                 // Etapa atual                         │
-│    "iat": 1703001600,                // Criado em                           │
-│    "exp": 1703008800                 // Expira em 2h                        │
-│  }                                                                          │
+│  • Publico-alvo: motoristas de app                                         │
+│  • Frequentemente usam dados moveis (SMS e mais direto)                    │
+│  • Muitos nao usam email regularmente                                      │
+│  • SMS e familiar e rapido                                                 │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.2 Camadas de Segurança
+### 5.2 Camadas de Seguranca
 
-| Camada | Implementação |
+| Camada | Implementacao |
 |--------|---------------|
-| **Rate Limiting** | 3 tentativas OTP/telefone/hora, 10 req/IP/minuto |
-| **Validação CPF** | Algoritmo de dígitos verificadores |
-| **OTP** | 6 dígitos, expira em 5 min, máximo 3 reenvios |
-| **JWT** | Assinado com chave rotacionada, fingerprint do device |
-| **Dados Sensíveis** | CPF nunca salvo em log, dados Uber/99 criptografados |
-| **Sequência** | Validação que não pode pular etapas |
+| **Rate Limiting** | 10 OTPs/hora/jornada, 3 tentativas por codigo |
+| **Validacao CPF** | Algoritmo de digitos verificadores |
+| **OTP** | 6 digitos, expira em 20 min, hash SHA-256 |
+| **Token** | UUID gerado server-side, expira com jornada (24h) |
+| **Headers** | X-Frame-Options: DENY, X-Content-Type-Options: nosniff |
+| **Sequencia** | Validacao que nao pode pular etapas (SessionGuard) |
 
-### 4.3 Persistência de Estado
+### 5.3 Persistencia de Estado
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -283,67 +278,66 @@ Jornada 100% web, contínua e sem fricção:
 │                                                                             │
 │  localStorage:                        Tabela device_modelo:                 │
 │  ┌─────────────────────┐              ┌─────────────────────┐              │
-│  │ token JWT           │              │ Todos os dados      │              │
-│  │ (válido por 2h)     │              │ da jornada          │              │
+│  │ Zustand store       │              │ Todos os dados      │              │
+│  │ (cashly-journey)    │              │ da jornada          │              │
 │  └─────────────────────┘              └─────────────────────┘              │
 │                                                                             │
-│  Função: ATALHO                       Função: FONTE DA VERDADE             │
-│  Pode perder: SIM                     Pode perder: NÃO                     │
+│  Funcao: ATALHO                       Funcao: FONTE DA VERDADE             │
+│  Pode perder: SIM                     Pode perder: NAO                     │
 │                                                                             │
 │  ─────────────────────────────────────────────────────────────────────     │
 │                                                                             │
 │  SE PERDER O localStorage:                                                 │
 │                                                                             │
-│  1. Usuário digita CPF novamente                                           │
+│  1. Usuario digita CPF novamente                                           │
 │  2. Sistema encontra jornada ativa em device_modelo                        │
 │  3. Envia novo OTP para confirmar identidade                               │
-│  4. Gera novo JWT                                                          │
-│  5. Continua EXATAMENTE de onde parou                                      │
+│  4. Continua EXATAMENTE de onde parou                                      │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 4.4 Sistema de Recuperação de Sessão (Implementado)
+### 5.4 Sistema de Recuperacao de Sessao
 
-**Problema Resolvido:** Usuário saia e voltava, sistema sempre pedia OTP novamente.
+**Problema Resolvido:** Usuario saia e voltava, sistema sempre pedia OTP novamente.
 
-**Causa Raiz:** O Zustand hidratava do localStorage DEPOIS das páginas verificarem o estado, causando redirecionamento incorreto.
+**Causa Raiz:** O Zustand hidratava do localStorage DEPOIS das paginas verificarem o estado.
 
-**Solução Implementada:**
+**Solucao Implementada:**
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    FLUXO DE RECUPERAÇÃO DE SESSÃO                           │
+│                    FLUXO DE RECUPERACAO DE SESSAO                           │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  Usuário abre app                                                          │
+│  Usuario abre app                                                          │
 │        │                                                                    │
 │        ▼                                                                    │
 │  ┌─────────────────┐                                                       │
 │  │ Aguardar        │ ← useHydration() usa API nativa do Zustand            │
-│  │ hidratação      │   persist.onFinishHydration()                         │
+│  │ hidratacao      │                                                       │
 │  └────────┬────────┘                                                       │
 │           │                                                                 │
 │           ▼                                                                 │
 │     Tem token?                                                             │
 │      /      \                                                              │
-│    Não      Sim                                                            │
+│    Nao      Sim                                                            │
 │     │        │                                                              │
 │     │        ▼                                                              │
 │     │   ┌─────────────────┐                                                │
 │     │   │ POST /api/      │ ← Valida token no backend                      │
-│     │   │ journey/validate│   Verifica: status, expiração, otp_verified_at │
+│     │   │ journey/validate│   Verifica: status, expiracao, otp_verified_at │
 │     │   └────────┬────────┘                                                │
 │     │            │                                                          │
 │     │            ▼                                                          │
-│     │      Token válido?                                                   │
+│     │      Token valido?                                                   │
 │     │       /        \                                                     │
-│     │     Não        Sim                                                   │
+│     │     Nao        Sim                                                   │
 │     │      │          │                                                     │
 │     │      ▼          ▼                                                     │
-│     │   Limpar    OTP válido (<20min)?                                     │
+│     │   Limpar    OTP valido (<20min)?                                     │
 │     │   store      /          \                                            │
-│     │      │     Não          Sim                                          │
+│     │      │     Nao          Sim                                          │
 │     │      │      │            │                                            │
 │     ▼      ▼      ▼            ▼                                            │
 │  ┌─────────────────┐  ┌──────────────┐  ┌──────────────────────┐           │
@@ -354,216 +348,87 @@ Jornada 100% web, contínua e sem fricção:
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Arquivos Criados:**
+**Arquivos do Sistema:**
 
-| Arquivo | Função |
+| Arquivo | Funcao |
 |---------|--------|
-| `src/app/api/journey/validate/route.ts` | API que valida token e retorna dados da jornada |
-| `src/hooks/useSessionRecovery.ts` | Hook que aguarda hidratação e valida sessão |
-| `src/components/SessionGuard.tsx` | Componente wrapper que protege rotas |
+| `src/app/api/journey/validate/route.ts` | API que valida token e retorna dados |
+| `src/hooks/useSessionRecovery.ts` | Hook que aguarda hidratacao e valida |
+| `src/components/SessionGuard.tsx` | Wrapper que protege rotas |
 
-**Arquivos Modificados:**
+### 5.5 Sistema de Idempotencia
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/store/journey.store.ts` | Hook useHydration melhorado + campo `otpVerifiedAt` + mais campos persistidos |
-| `src/types/journey.types.ts` | Helpers `getRouteForStep()` e `canAccessStep()` |
-| Todas as páginas `/credito/*` | Usam `SessionGuard` para proteção |
+**Problema Resolvido:** Usuarios com conexao instavel causavam requisicoes duplicadas.
 
-**Campos Persistidos no localStorage (chave: `cashly-journey`):**
-
-```typescript
-{
-  cpf, leadId, leadData,           // Dados do usuário
-  journeyId, token,                // Identificação da jornada
-  currentStep, otpVerified,        // Estado atual
-  otpVerifiedAt,                   // Timestamp para validar expiração OTP
-  deviceInfo, valorAprovado,       // Dados coletados
-  rendaInfo, knoxImei, contratoId  // Progresso da jornada
-}
-```
-
-**Decisões Importantes:**
-
-| Decisão | Justificativa |
-|---------|---------------|
-| OTP expira em 20 minutos | Segurança vs. UX - tempo suficiente para completar jornada |
-| OTP expirado mantém journeyId | Não criar nova jornada, apenas revalidar identidade |
-| Validação no backend | Nunca confiar apenas no estado do frontend |
-| Spinner durante verificação | Evita flash de tela de CPF antes de redirecionar |
-
-### 4.5 Sistema de Idempotência (Implementado)
-
-**Problema Resolvido:** Usuários com conexão instável (motoristas Uber/99) causavam:
-- Double-click criava OTPs duplicados
-- Refresh na página de device sobrescrevia validação anterior
-- Race conditions entre SELECT e UPDATE no OTP
-- Erros silenciosos nas páginas de renda e oferta
-
-**Contexto:** Motoristas de app frequentemente têm conexão instável (3G/4G oscilante), causando:
-- Requisições duplicadas por timeout/retry do navegador
-- Cliques múltiplos por latência de resposta
-- Estado inconsistente entre frontend e backend
-
-**Soluções Implementadas:**
+**Solucoes Implementadas:**
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    PADRÕES DE IDEMPOTÊNCIA                                  │
+│                    PADROES DE IDEMPOTENCIA                                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  1. FUNÇÃO ATÔMICA PostgreSQL (OTP)                                        │
+│  1. FUNCAO ATOMICA PostgreSQL (OTP)                                        │
 │  ───────────────────────────────────                                        │
 │                                                                             │
-│  ANTES (3 queries separadas - race condition):                             │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐            │
-│  │ SELECT otp      │─►│ UPDATE otp      │─►│ UPDATE jornada  │            │
-│  │ WHERE used=false│  │ SET used=true   │  │ SET step='device│            │
-│  └─────────────────┘  └─────────────────┘  └─────────────────┘            │
-│         ▲                                                                   │
-│         │ Duas requisições simultâneas podiam passar!                      │
-│                                                                             │
-│  DEPOIS (função atômica com FOR UPDATE lock):                              │
-│  ┌─────────────────────────────────────────────────────────────────┐       │
-│  │  verify_otp_atomic(journey_id, code_hash)                       │       │
-│  │  • SELECT ... FOR UPDATE (lock exclusivo)                       │       │
-│  │  • Valida código e tentativas                                   │       │
-│  │  • UPDATE otp + UPDATE jornada + INSERT evento                  │       │
-│  │  • Tudo em uma transação                                        │       │
-│  └─────────────────────────────────────────────────────────────────┘       │
+│  verify_otp_atomic(journey_id, code_hash)                                  │
+│  • SELECT ... FOR UPDATE (lock exclusivo)                                  │
+│  • Valida codigo e tentativas                                              │
+│  • UPDATE otp + UPDATE jornada + INSERT evento                             │
+│  • Tudo em uma transacao                                                   │
 │                                                                             │
 │  ─────────────────────────────────────────────────────────────────────     │
 │                                                                             │
 │  2. COMPARE-AND-SWAP (Device Validation)                                   │
 │  ───────────────────────────────────────                                    │
 │                                                                             │
-│  ANTES:                                                                     │
-│  supabase.update(data).eq('id', journeyId)  // Sempre sobrescreve          │
-│                                                                             │
-│  DEPOIS:                                                                    │
-│  // 1. Verifica se já foi validado                                         │
-│  if (existingJourney.device_checked_at) {                                  │
-│    return { ...resultado_anterior, alreadyChecked: true }                  │
-│  }                                                                          │
-│                                                                             │
-│  // 2. CAS: só atualiza se ainda não foi verificado                        │
-│  supabase.update(data)                                                      │
-│    .eq('id', journeyId)                                                     │
-│    .is('device_checked_at', null)  // ← Condição CAS                       │
+│  // So atualiza se ainda nao foi verificado                                │
+│  supabase.update(data)                                                     │
+│    .eq('id', journeyId)                                                    │
+│    .is('device_checked_at', null)  // ← Condicao CAS                       │
 │                                                                             │
 │  ─────────────────────────────────────────────────────────────────────     │
 │                                                                             │
-│  3. ÍNDICE UNIQUE PARCIAL (OTP)                                            │
+│  3. INDICE UNIQUE PARCIAL (OTP)                                            │
 │  ──────────────────────────────                                             │
 │                                                                             │
 │  CREATE UNIQUE INDEX idx_otp_codes_device_unused_unique                    │
 │  ON otp_codes(device_modelo_id)                                            │
 │  WHERE used = false;                                                        │
 │                                                                             │
-│  • Garante apenas 1 OTP não-usado por jornada                              │
-│  • Double-click em "Reenviar" não cria duplicatas                          │
-│  • Expiração verificada na função (NOW() não é IMMUTABLE para índice)      │
+│  • Garante apenas 1 OTP nao-usado por jornada                              │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Migration Criada:** `supabase/migrations/005_idempotency.sql`
-
-```sql
--- Conteúdo principal:
-
--- 1. Limpa OTPs duplicados existentes (mantém mais recente)
-UPDATE otp_codes o1 SET used = true
-WHERE used = false AND EXISTS (
-  SELECT 1 FROM otp_codes o2
-  WHERE o2.device_modelo_id = o1.device_modelo_id
-    AND o2.used = false AND o2.created_at > o1.created_at
-);
-
--- 2. Índice UNIQUE para OTPs não-usados
-CREATE UNIQUE INDEX idx_otp_codes_device_unused_unique
-ON otp_codes(device_modelo_id) WHERE used = false;
-
--- 3. Função atômica para verificar OTP
-CREATE FUNCTION verify_otp_atomic(p_journey_id BIGINT, p_code_hash TEXT)
-RETURNS JSON AS $$ ... $$;
-```
-
-**Arquivos Modificados:**
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/app/api/otp/verify/route.ts` | Usa `supabase.rpc('verify_otp_atomic')` em vez de 3 queries |
-| `src/app/api/device/validate/route.ts` | Adiciona verificação CAS com `.is('device_checked_at', null)` |
-| `src/app/credito/renda/page.tsx` | Adiciona try/catch + estado de erro + botão retry |
-| `src/app/credito/oferta/page.tsx` | Adiciona try/catch + mensagem de erro inline |
-
-**Tabela de Operações e Idempotência:**
-
-| Operação | Era Idempotente? | Agora | Solução |
+| Operacao | Era Idempotente? | Agora | Solucao |
 |----------|------------------|-------|---------|
-| `/api/otp/verify` | ❌ Race condition | ✅ | Função atômica PostgreSQL |
+| `/api/otp/verify` | ❌ Race condition | ✅ | Funcao atomica PostgreSQL |
 | `/api/device/validate` | ❌ Sobrescrevia | ✅ | Compare-And-Swap |
-| OTP duplicados | ❌ Criava múltiplos | ✅ | Índice UNIQUE parcial |
-| Erro em renda/oferta | ❌ Sem feedback | ✅ | try/catch + UI de erro |
-
-**Decisões Técnicas:**
-
-| Decisão | Justificativa |
-|---------|---------------|
-| Função PostgreSQL (não código) | Atomicidade garantida pelo banco, não depende de transação do app |
-| FOR UPDATE lock | Previne leitura suja entre requisições concorrentes |
-| CAS com `.is(null)` | Mais simples que versioning, suficiente para nosso caso |
-| Índice parcial sem NOW() | NOW() não é IMMUTABLE, expiração verificada na função |
-| Retornar `alreadyChecked: true` | Frontend pode tratar retry como sucesso silencioso |
-
-**Validação:**
-
-- [x] Duplo clique em "Verificar OTP" não marca 2x como usado
-- [x] Refresh na página de device não sobrescreve validação anterior
-- [x] Erro na página de renda mostra mensagem clara + botão retry
-- [x] Erro na página de oferta mostra mensagem inline
-- [x] Apenas 1 OTP válido por jornada (índice funcionando)
+| OTP duplicados | ❌ Criava multiplos | ✅ | Indice UNIQUE parcial |
 
 ---
 
-## 5. Detecção de Device
+## 6. Deteccao de Device
 
-### 5.1 Client Hints API
+### 6.1 Client Hints API
 
 ```javascript
-// Coleta de informações do device no frontend
 if (navigator.userAgentData) {
   const hints = await navigator.userAgentData.getHighEntropyValues([
     "model",           // "SM-S918B"
     "platform",        // "Android"
-    "platformVersion", // "14"
-    "architecture"     // "arm64"
+    "platformVersion"  // "14"
   ]);
-  
-  // Envia apenas o necessário para o backend
-  await fetch('/api/check-device', {
-    method: 'POST',
-    body: JSON.stringify({
-      model: hints.model,
-      platform: hints.platform,
-      version: hints.platformVersion
-    })
-  });
 }
 ```
 
-### 5.2 Validação no Backend
+### 6.2 Validacao no Backend
 
 ```sql
--- Tabela de devices elegíveis (regex patterns)
+-- Tabela de devices elegiveis (regex patterns)
 SELECT * FROM eligible_devices WHERE active = true;
 
--- brand      | model_pattern      | description
--- Samsung    | ^SM-S9[0-9]{2}     | Galaxy S21/S22/S23/S24
--- Samsung    | ^SM-A[5-7][0-9]    | Galaxy A50-A70 (2022+)
-
--- Validação
+-- Validacao
 SELECT EXISTS (
   SELECT 1 FROM eligible_devices
   WHERE active = true
@@ -571,186 +436,133 @@ SELECT EXISTS (
 );
 ```
 
-### 5.3 Por Que Não Gravar Tudo?
-
-**Decisão:** Gravar apenas modelo + resultado (aprovado/reprovado)
-
-**Justificativa:**
-- User Agent completo é muito verboso e muda frequentemente
-- Informações detalhadas do device não são necessárias para decisão
-- Menos dados = melhor performance e menor custo
-- Compliance com LGPD (minimização de dados)
-
 ---
 
-## 6. Integração com RPA (Uber/99)
+## 7. Integracao com RPA (Uber/99)
 
-### 6.1 Fluxo Assíncrono
+### 7.1 Fluxo Assincrono
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    FLUXO DE VALIDAÇÃO UBER/99                               │
+│                    FLUXO DE VALIDACAO UBER/99                               │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  FRONTEND                 BACKEND                   RPA (Python)            │
-│  ────────                 ───────                   ────────────            │
 │                                                                             │
-│  [Form login/senha]                                                        │
+│  [Form credenciais]                                                        │
 │        │                                                                    │
 │        ▼                                                                    │
-│  POST /api/submit-uber ──────────────────────────────────────────────►     │
+│  POST /api/submit-uber ─────────────────────────────────────────────►      │
 │        │                     │                                              │
 │        │              [Enfileira job]                                       │
 │        │                     │                                              │
-│        │                     ▼                                              │
-│        │              [Retorna job_id]                                      │
-│        │                     │                                              │
-│  ◄─────┴─────────────────────┘                                             │
+│  ◄─────┴────────────[Retorna job_id]                                       │
 │        │                                                                    │
 │  [Mostra "Analisando..."]                          [Worker processa]       │
 │        │                                                  │                 │
-│        │                                                  ▼                 │
 │  [Polling a cada 5s] ────────────────────────────► [Scraping Uber]         │
 │        │                     │                           │                  │
-│        │              [Verifica status]                  │                  │
-│        │                     │                           ▼                  │
-│        │                     │                    [Salva resultado]         │
-│        │                     │                           │                  │
-│        │              [Job concluído!]◄──────────────────┘                  │
+│        │              [Job concluido!]◄──────────────────┘                  │
 │        │                     │                                              │
 │  ◄─────┴─────────────────────┘                                             │
 │        │                                                                    │
-│  [Processa resultado]                                                      │
-│  - Valida nome (similaridade)                                              │
-│  - Executa algoritmo de score                                              │
-│  - Calcula valor aprovado                                                  │
+│  [Calcula score e valor]                                                   │
 │        │                                                                    │
-│        ▼                                                                    │
-│  [Redireciona para /offer]                                                 │
+│  [Redireciona para /oferta]                                                │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 6.2 Validações
+---
 
-| Validação | Método | Critério |
-|-----------|--------|----------|
-| Nome | Levenshtein Distance | > 0.8 de similaridade |
-| Score | Algoritmo Python | Ganhos semanais + comportamento |
-| Valor | Regra de negócio | Baseado no score |
+## 8. Integracoes Externas
+
+| Servico | Proposito | Documentacao |
+|---------|-----------|--------------|
+| Supabase | Banco PostgreSQL | https://supabase.com/docs |
+| ClickSend | Envio de SMS (OTP) | https://developers.clicksend.com |
+| Palenca | Verificacao de renda | https://docs.palenca.com |
+| ViaCEP | Busca de endereco | https://viacep.com.br |
+| Samsung Knox | Registro de dispositivo | (interno) |
 
 ---
 
-## 7. Analytics de Dropout
+## 9. Analytics de Dropout
 
-### 7.1 Event Sourcing
+### 9.1 Event Sourcing
 
-Cada ação gera um evento na tabela `journey_events`:
+Cada acao gera um evento na tabela `journey_events`:
 
 ```sql
 INSERT INTO journey_events (device_modelo_id, event_type, step_name, metadata)
 VALUES (123, 'step_started', 'device', '{"model": "SM-S918B"}');
 ```
 
-### 7.2 Tipos de Eventos
+### 9.2 Tipos de Eventos
 
-| event_type | Descrição |
+| event_type | Descricao |
 |------------|-----------|
-| step_started | Usuário entrou na etapa |
-| step_completed | Usuário completou a etapa |
-| step_failed | Erro ou reprovação |
+| step_started | Usuario entrou na etapa |
+| step_completed | Usuario completou a etapa |
+| step_failed | Erro ou reprovacao |
 | otp_sent | OTP enviado |
 | otp_verified | OTP validado |
-| otp_failed | OTP inválido |
-| session_expired | Sessão expirou |
-| session_recovered | Sessão recuperada |
-
-### 7.3 Views de Analytics
-
-```sql
--- Funil por etapa
-SELECT * FROM v_journey_funnel;
-
--- jornada_step | total | completed | rejected | completion_rate
--- otp          | 1000  | 950       | 50       | 95.00
--- device       | 950   | 800       | 150      | 84.21
--- uber         | 800   | 600       | 200      | 75.00
--- offer        | 600   | 550       | 50       | 91.67
--- knox         | 550   | 500       | 50       | 90.91
--- contract     | 500   | 480       | 20       | 96.00
-```
+| session_expired | Sessao expirou |
+| session_recovered | Sessao recuperada |
 
 ---
 
-## 8. Tratamento de Erros e Edge Cases
+## 10. Tratamento de Erros
 
-### 8.1 Cenários e Respostas
-
-| Cenário | Resposta |
+| Cenario | Resposta |
 |---------|----------|
-| CPF não encontrado | "CPF não cadastrado no sistema" |
-| Lead em Blacklist | "Acesso temporariamente indisponível" |
-| OTP expirado | "Código expirado. Clique para reenviar" |
-| OTP inválido (3x) | Bloqueia por 1h |
-| Device não elegível | "Seu dispositivo não é compatível" |
+| CPF nao encontrado | "CPF nao cadastrado no sistema" |
+| Lead em Blacklist | "Acesso temporariamente indisponivel" |
+| OTP expirado | "Codigo expirado. Clique para reenviar" |
+| OTP invalido (3x) | Bloqueia por 1h |
+| Device nao elegivel | "Seu dispositivo nao e compativel" |
 | Jornada expirada (24h) | Inicia nova jornada |
-| Erro no RPA | "Não conseguimos validar. Tente novamente" |
-| Knox não confirmado | Permite 3 tentativas de verificação |
-
-### 8.2 Timeout e Retry
-
-| Operação | Timeout | Retry |
-|----------|---------|-------|
-| Busca de lead | 5s | 2x |
-| Envio de OTP | 10s | 3x |
-| Check device | 5s | 2x |
-| RPA Uber/99 | 60s | 1x |
-| Knox verification | 10s | 3x |
 
 ---
 
-## 9. Roadmap de Implementação
+## 11. ADRs (Decisoes de Arquitetura)
 
-### Fase 1: MVP (2 semanas)
-- [ ] Estrutura Next.js + Supabase
-- [ ] Tela de CPF + OTP
-- [ ] Validação de device
-- [ ] Integração básica Uber/99
-
-### Fase 2: Core (2 semanas)
-- [ ] Algoritmo de score
-- [ ] Geração de oferta
-- [ ] Integração Knox
-- [ ] Geração de contrato
-
-### Fase 3: Polish (1 semana)
-- [ ] Analytics completo
-- [ ] Notificações push
-- [ ] Otimizações de UX
-- [ ] Testes de carga
-
----
-
-## 10. Decisões Técnicas Registradas
-
-| Data | Decisão | Justificativa |
+| Data | Decisao | Justificativa |
 |------|---------|---------------|
-| Dez/24 | JWT em localStorage | Performance + UX de retomada |
-| Dez/24 | OTP via SMS (não magic link) | Público-alvo usa mais SMS |
-| Dez/24 | Jornada em device_modelo | Histórico de tentativas + analytics |
-| Dez/24 | Não alterar tabela lead | Minimizar impacto em sistemas existentes |
-| Dez/24 | Client Hints API | Detecção de device mais precisa |
-| Dez/24 | Polling para RPA | Simplicidade vs WebSocket |
-| Dez/24 | Função atômica PostgreSQL para OTP | Garantir atomicidade no banco, não no código |
-| Dez/24 | CAS para device validation | Evitar sobrescrita em requisições duplicadas |
-| Dez/24 | Índice UNIQUE parcial sem NOW() | NOW() não é IMMUTABLE, expiração na função |
+| Dez/24 | Zustand com localStorage | Performance + UX de retomada |
+| Dez/24 | OTP via SMS (nao magic link) | Publico-alvo usa mais SMS |
+| Dez/24 | Jornada em device_modelo | Historico de tentativas + analytics |
+| Dez/24 | Nao alterar tabela lead | Minimizar impacto em sistemas existentes |
+| Dez/24 | Client Hints API | Deteccao de device mais precisa |
+| Dez/24 | Funcao atomica PostgreSQL para OTP | Garantir atomicidade no banco |
+| Dez/24 | CAS para device validation | Evitar sobrescrita em requisicoes duplicadas |
+| Dez/24 | Beacon API para eventos | Entrega garantida mesmo ao fechar pagina |
+
+---
+
+## 12. Performance e Escalabilidade
+
+### Performance
+- Cache de CPF: 5 minutos em memoria
+- Persistencia seletiva: Apenas dados essenciais no localStorage
+- Beacon API: Fire-and-forget para eventos
+
+### Escalabilidade
+- Supabase: Auto-scaling PostgreSQL
+- Vercel: Serverless functions escalam automaticamente
+- Rate limiting: 10 OTPs/hora por jornada
+- Indices otimizados: Queries frequentes indexadas
 
 ---
 
 ## Changelog
 
-| Versão | Data | Alterações |
+| Versao | Data | Alteracoes |
 |--------|------|------------|
-| 1.0 | Dez/24 | Versão inicial |
-| 1.1 | Dez/24 | Implementação do sistema de recuperação de sessão (seção 4.4) |
-| 1.2 | Dez/24 | Sistema de idempotência: função atômica OTP, CAS device, índice UNIQUE (seção 4.5) |
+| 1.0 | Dez/24 | Versao inicial |
+| 1.1 | Dez/24 | Sistema de recuperacao de sessao |
+| 1.2 | Dez/24 | Sistema de idempotencia |
+
+---
+
+*Ultima atualizacao: 2025-12-22*

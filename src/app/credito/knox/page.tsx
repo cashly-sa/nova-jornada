@@ -12,6 +12,7 @@ import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
+import { usePreventBackNavigation } from '@/hooks/usePreventBackNavigation'
 import { STEP_NAMES } from '@/types/journey.types'
 
 const steps = [
@@ -59,6 +60,7 @@ function KnoxPageContent() {
   useVisibilityTracker(STEP_NAMES.KNOX)
   useAbandonmentTracker(journeyId, STEP_NAMES.KNOX, isCompleted)
   useHeartbeat()
+  usePreventBackNavigation()
 
   const handleImeiChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatIMEI(e.target.value)
@@ -114,7 +116,7 @@ function KnoxPageContent() {
     setIsCompleted(true)
     setKnoxImei(imei)
     setStep('06')
-    router.push('/credito/contrato')
+    router.replace('/credito/contrato')
 
     setIsLoading(false)
   }

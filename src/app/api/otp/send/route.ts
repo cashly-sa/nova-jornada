@@ -117,8 +117,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Código enviado',
-      // Em dev, retornar o código para facilitar testes
-      ...(process.env.NODE_ENV === 'development' && { devCode: code }),
+      // REMOVIDO: devCode - nunca expor OTP no response por segurança
     })
 
   } catch (error) {

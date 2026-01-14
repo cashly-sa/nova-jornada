@@ -11,7 +11,10 @@ import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
+import { usePreventBackNavigation } from '@/hooks/usePreventBackNavigation'
 import { STEP_NAMES } from '@/types/journey.types'
+import { PalencaModal } from '@/components/PalencaModal'
+import { PalencaSuccessData, PalencaError } from '@/types/palenca.types'
 
 // Logo Uber (ícone quadrado oficial)
 function UberLogo({ inverted = false }: { inverted?: boolean }) {
@@ -79,49 +82,64 @@ function RendaPageContent() {
   const [error, setError] = useState('')
   const [isCompleted, setIsCompleted] = useState(false)
 
+  // Estados para Palenca
+  const [showPalenca, setShowPalenca] = useState(false)
+  const [selectedPlatform, setSelectedPlatform] = useState<'uber' | '99' | null>(null)
+
   // Hooks de tracking
   const { logEvent, trackClick, trackStepCompleted } = useEventTracker(STEP_NAMES.RENDA)
   useVisibilityTracker(STEP_NAMES.RENDA)
   useAbandonmentTracker(journeyId, STEP_NAMES.RENDA, isCompleted)
   useHeartbeat()
+  usePreventBackNavigation()
 
-  const handleSelect = async (selected: 'uber' | '99') => {
+  // Abre modal da Palenca ao selecionar plataforma
+  const handleSelect = (selected: 'uber' | '99') => {
+    trackClick(`select_${selected}`, selected === 'uber' ? 'Uber' : '99')
+    logEvent('platform_selected', { platform: selected })
+
+    setSelectedPlatform(selected)
+    setPlataforma(selected)
+    setShowPalenca(true)
+    logEvent('palenca_opened', { platform: selected })
+  }
+
+  // Callback de sucesso da Palenca
+  const handlePalencaSuccess = async (data: PalencaSuccessData) => {
+    console.log('[Renda] Palenca success:', data)
+    setShowPalenca(false)
+    setStatus('processing')
+    setIsLoading(true)
+
     try {
-      // Logar seleção de plataforma
-      trackClick(`select_${selected}`, selected === 'uber' ? 'Uber' : '99')
-      logEvent('platform_selected', { platform: selected })
-
-      setPlataforma(selected)
-      setIsLoading(true)
-      setStatus('processing')
-      setError('')
-
-      // Simular processamento (MOCK)
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      // Mock de dados de renda
-      const mockRendaInfo = {
-        plataforma: selected,
-        dados_uber: selected === 'uber' ? {
+      // Dados de renda baseados na Palenca
+      const rendaInfo = {
+        plataforma: selectedPlatform || 'uber',
+        dados_uber: selectedPlatform === 'uber' ? {
           ativo: true,
-          corridas_mes: 150,
-          faturamento_medio: 4500,
-          avaliacao: 4.85,
+          corridas_mes: 0, // Sera preenchido via API Palenca
+          faturamento_medio: 0,
+          avaliacao: 0,
         } : undefined,
-        dados_99: selected === '99' ? {
+        dados_99: selectedPlatform === '99' ? {
           ativo: true,
-          corridas_mes: 120,
-          faturamento_medio: 3800,
-          avaliacao: 4.9,
+          corridas_mes: 0,
+          faturamento_medio: 0,
+          avaliacao: 0,
         } : undefined,
-        score: 750,
+        score: 750, // Score padrao inicial
+        palenca_user_id: data.userId,
+        palenca_account_id: data.accountId,
       }
 
-      setRendaInfo(mockRendaInfo)
+      setRendaInfo(rendaInfo)
       setStatus('done')
 
-      // Logar validação de renda
-      logEvent('renda_validated', { platform: selected, score: 750 })
+      logEvent('renda_validated', {
+        platform: selectedPlatform,
+        palencaUserId: data.userId,
+        palencaAccountId: data.accountId,
+      })
       trackStepCompleted()
 
       // Atualizar step no banco
@@ -131,28 +149,42 @@ function RendaPageContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             journeyId,
-            step: '04'
-          })
+            step: '04',
+          }),
         })
       } catch (err) {
         console.error('Erro ao atualizar step:', err)
       }
 
-      // Ir para oferta após breve delay
+      // Ir para oferta apos breve delay
       setTimeout(() => {
         setIsCompleted(true)
         setStep('04')
-        router.push('/credito/oferta')
+        router.replace('/credito/oferta')
       }, 1500)
-
     } catch (err) {
-      console.error('Erro ao validar renda:', err)
-      setError('Erro ao validar sua renda. Tente novamente.')
+      console.error('Erro ao processar dados Palenca:', err)
+      setError('Erro ao processar dados. Tente novamente.')
       setStatus('error')
-      logEvent('renda_error', { platform: selected, error: String(err) })
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Callback de erro da Palenca
+  const handlePalencaError = (error: PalencaError) => {
+    console.error('[Renda] Palenca error:', error)
+    setShowPalenca(false)
+    setError(error.message || 'Erro na verificacao. Tente novamente.')
+    setStatus('error')
+    logEvent('palenca_error', { code: error.code, message: error.message })
+  }
+
+  // Callback ao fechar modal da Palenca
+  const handlePalencaClose = () => {
+    setShowPalenca(false)
+    logEvent('palenca_closed', { platform: selectedPlatform })
+    // Nao muda status, permite usuario tentar novamente
   }
 
   const handleRetry = () => {
@@ -162,8 +194,19 @@ function RendaPageContent() {
   }
 
   return (
-    <MobileOnly>
-      <main className="min-h-screen bg-background flex flex-col">
+    <>
+      {/* Modal Palenca - Fullscreen */}
+      <PalencaModal
+        isOpen={showPalenca}
+        onClose={handlePalencaClose}
+        onSuccess={handlePalencaSuccess}
+        onError={handlePalencaError}
+        platform={selectedPlatform || 'uber'}
+        journeyId={journeyId || 0}
+      />
+
+      <MobileOnly>
+        <main className="min-h-screen bg-background flex flex-col">
         {/* Header */}
         <div className="pt-6 pb-2">
           <CashlyLogo size="sm" />
@@ -281,5 +324,6 @@ function RendaPageContent() {
         </div>
       </main>
     </MobileOnly>
+    </>
   )
 }

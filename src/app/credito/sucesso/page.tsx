@@ -9,6 +9,7 @@ import { formatCurrency } from '@/utils/validators'
 import { SessionGuard } from '@/components/SessionGuard'
 import { useEventTracker } from '@/hooks/useEventTracker'
 import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
+import { usePreventBackNavigation } from '@/hooks/usePreventBackNavigation'
 
 export default function SucessoPage() {
   return (
@@ -25,6 +26,7 @@ function SucessoPageContent() {
   // Hooks de tracking
   const { logEvent, trackClick, trackLinkClick } = useEventTracker('07')
   useVisibilityTracker('07')
+  usePreventBackNavigation()
 
   // Logar conclusão da jornada
   useEffect(() => {
@@ -37,7 +39,7 @@ function SucessoPageContent() {
   const handleNewJourney = () => {
     trackClick('new_journey', 'Voltar ao início')
     reset()
-    router.push('/')
+    router.replace('/')
   }
 
   const handleDownloadApp = () => {

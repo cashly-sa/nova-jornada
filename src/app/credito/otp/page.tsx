@@ -9,6 +9,7 @@ import { useJourneyStore, useHydration } from '@/store/journey.store'
 import { maskPhone } from '@/utils/validators'
 import { useAbandonmentTracker } from '@/hooks/useAbandonmentTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
+import { usePreventBackNavigation } from '@/hooks/usePreventBackNavigation'
 import { STEP_NAMES, getRouteForStep, JourneyStep } from '@/types/journey.types'
 
 export default function OTPPage() {
@@ -29,13 +30,14 @@ export default function OTPPage() {
   // Rastrear abandono - só dispara se não verificou OTP
   useAbandonmentTracker(journeyId, STEP_NAMES.OTP, isCompleted)
   useHeartbeat()
+  usePreventBackNavigation()
   const hasSentOTP = useRef(false)
 
   // Redirecionar se não tiver dados (após hidratação)
   useEffect(() => {
     if (!hydrated) return
     if (!journeyId || !leadData) {
-      router.push('/')
+      router.replace('/')
     }
   }, [hydrated, journeyId, leadData, router])
 
@@ -204,7 +206,7 @@ export default function OTPPage() {
       // Redirecionar para a rota correspondente ao step atual
       const targetRoute = getRouteForStep(targetStep)
       console.log('[OTP] Redirecionando para:', targetRoute, '(step:', targetStep, ')')
-      router.push(targetRoute)
+      router.replace(targetRoute)
 
     } catch (err) {
       setError('Erro ao verificar código')

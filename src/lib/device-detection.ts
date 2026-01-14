@@ -7,11 +7,23 @@ export interface DeviceInfo {
 }
 
 // Declaração de tipos para Client Hints API
+interface NavigatorUABrand {
+  brand: string
+  version: string
+}
+
 interface NavigatorUAData {
+  // Low Entropy (sempre disponíveis)
+  brands: NavigatorUABrand[]
+  mobile: boolean
+  platform: string
+  // High Entropy (requer chamada assíncrona)
   getHighEntropyValues(hints: string[]): Promise<{
     model?: string
     platform?: string
     platformVersion?: string
+    architecture?: string
+    uaFullVersion?: string
   }>
 }
 
@@ -50,84 +62,9 @@ export async function detectDevice(): Promise<DeviceInfo> {
 }
 
 function parseUserAgent(ua: string): DeviceInfo {
-  // Samsung
-  const samsungMatch = ua.match(/SM-[A-Z0-9]+/i)
-  if (samsungMatch) {
-    return {
-      modelo: samsungMatch[0],
-      fabricante: 'samsung',
-      userAgent: ua
-    }
-  }
+  // ========== APPLE (verificar PRIMEIRO para evitar falsos positivos) ==========
 
-  // Xiaomi/Redmi/Poco
-  const xiaomiPatterns = [
-    /\d{4,}[A-Z0-9]+/i,  // Ex: 23117RA68G
-    /Redmi\s+[A-Za-z0-9\s]+/i,
-    /POCO\s+[A-Za-z0-9\s]+/i,
-  ]
-
-  for (const pattern of xiaomiPatterns) {
-    const match = ua.match(pattern)
-    if (match) {
-      return {
-        modelo: match[0].trim(),
-        fabricante: 'Xiaomi',
-        userAgent: ua
-      }
-    }
-  }
-
-  // Motorola
-  const motoMatch = ua.match(/moto\s*[a-z0-9\(\)\s]+/i)
-  if (motoMatch) {
-    return {
-      modelo: motoMatch[0].trim(),
-      fabricante: 'motorola',
-      userAgent: ua
-    }
-  }
-
-  const edgeMatch = ua.match(/motorola\s+edge\s*[a-z0-9\s]+/i)
-  if (edgeMatch) {
-    return {
-      modelo: edgeMatch[0].trim(),
-      fabricante: 'motorola',
-      userAgent: ua
-    }
-  }
-
-  // Realme
-  const realmeMatch = ua.match(/RMX\d+/i)
-  if (realmeMatch) {
-    return {
-      modelo: realmeMatch[0],
-      fabricante: 'realme',
-      userAgent: ua
-    }
-  }
-
-  // OPPO
-  const oppoMatch = ua.match(/CPH\d+/i)
-  if (oppoMatch) {
-    return {
-      modelo: oppoMatch[0],
-      fabricante: 'OPPO',
-      userAgent: ua
-    }
-  }
-
-  // Infinix
-  const infinixMatch = ua.match(/Infinix\s*X\d+/i)
-  if (infinixMatch) {
-    return {
-      modelo: infinixMatch[0],
-      fabricante: 'INFINIX',
-      userAgent: ua
-    }
-  }
-
-  // iPhone - iOS não reporta modelo específico no User-Agent
+  // iPhone
   if (ua.includes('iPhone')) {
     return {
       modelo: 'iPhone',
@@ -145,7 +82,109 @@ function parseUserAgent(ua: string): DeviceInfo {
     }
   }
 
-  // Não identificado
+  // Mac (para evitar falsos positivos em desktop)
+  if (ua.includes('Macintosh')) {
+    return {
+      modelo: 'Mac',
+      fabricante: 'Apple',
+      userAgent: ua
+    }
+  }
+
+  // ========== ANDROID ==========
+
+  // Samsung - padrão SM-XXXXX
+  const samsungMatch = ua.match(/SM-[A-Z]\d{3,4}[A-Z]?/i)
+  if (samsungMatch) {
+    return {
+      modelo: samsungMatch[0].toUpperCase(),
+      fabricante: 'Samsung',
+      userAgent: ua
+    }
+  }
+
+  // Motorola
+  const motoMatch = ua.match(/moto\s*[a-z0-9\(\)\s]+/i)
+  if (motoMatch) {
+    return {
+      modelo: motoMatch[0].trim(),
+      fabricante: 'Motorola',
+      userAgent: ua
+    }
+  }
+
+  const edgeMatch = ua.match(/motorola\s+edge\s*[a-z0-9\s]+/i)
+  if (edgeMatch) {
+    return {
+      modelo: edgeMatch[0].trim(),
+      fabricante: 'Motorola',
+      userAgent: ua
+    }
+  }
+
+  // Realme - padrão RMX seguido de números
+  const realmeMatch = ua.match(/RMX\d{4}/i)
+  if (realmeMatch) {
+    return {
+      modelo: realmeMatch[0].toUpperCase(),
+      fabricante: 'Realme',
+      userAgent: ua
+    }
+  }
+
+  // OPPO - padrão CPH seguido de números
+  const oppoMatch = ua.match(/CPH\d{4}/i)
+  if (oppoMatch) {
+    return {
+      modelo: oppoMatch[0].toUpperCase(),
+      fabricante: 'OPPO',
+      userAgent: ua
+    }
+  }
+
+  // Infinix - padrão Infinix X seguido de números
+  const infinixMatch = ua.match(/Infinix\s*X\d{3,4}/i)
+  if (infinixMatch) {
+    return {
+      modelo: infinixMatch[0],
+      fabricante: 'Infinix',
+      userAgent: ua
+    }
+  }
+
+  // Xiaomi/Redmi/Poco - verificar por último (padrões mais genéricos)
+  // Redmi explícito
+  const redmiMatch = ua.match(/Redmi\s+[A-Za-z0-9]+(\s+[A-Za-z0-9]+)?/i)
+  if (redmiMatch) {
+    return {
+      modelo: redmiMatch[0].trim(),
+      fabricante: 'Xiaomi',
+      userAgent: ua
+    }
+  }
+
+  // POCO explícito
+  const pocoMatch = ua.match(/POCO\s+[A-Za-z0-9]+/i)
+  if (pocoMatch) {
+    return {
+      modelo: pocoMatch[0].trim(),
+      fabricante: 'Xiaomi',
+      userAgent: ua
+    }
+  }
+
+  // Xiaomi modelo numérico (ex: 23117RA68G) - mais restritivo
+  // Deve começar com 2 dígitos do ano (20, 21, 22, 23, 24, 25) + mais dígitos + letras
+  const xiaomiNumericMatch = ua.match(/\b(2[0-5]\d{3,4}[A-Z]{2,}[A-Z0-9]*)\b/i)
+  if (xiaomiNumericMatch) {
+    return {
+      modelo: xiaomiNumericMatch[1].toUpperCase(),
+      fabricante: 'Xiaomi',
+      userAgent: ua
+    }
+  }
+
+  // ========== NÃO IDENTIFICADO ==========
   return {
     modelo: 'unknown',
     fabricante: 'unknown',
@@ -153,9 +192,44 @@ function parseUserAgent(ua: string): DeviceInfo {
   }
 }
 
+// Detecção usando 51Degrees API (server-side)
+export async function detectDeviceWith51Degrees(): Promise<DeviceInfo> {
+  const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : ''
+
+  try {
+    const response = await fetch('/api/device/detect', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+
+    if (data.success && data.device) {
+      return {
+        modelo: data.device.modelo !== 'unknown' ? data.device.modelo : 'unknown',
+        fabricante: data.device.fabricante !== 'unknown' ? data.device.fabricante : 'unknown',
+        userAgent,
+      }
+    }
+
+    throw new Error('Invalid response from 51Degrees')
+  } catch (error) {
+    console.warn('51Degrees falhou, usando fallback local:', error)
+    // Fallback para detecção local
+    return detectDevice()
+  }
+}
+
 // Hook para usar no React
 export function useDeviceDetection() {
   return {
-    detect: detectDevice
+    detect: detectDevice,
+    detectWith51Degrees: detectDeviceWith51Degrees
   }
 }
