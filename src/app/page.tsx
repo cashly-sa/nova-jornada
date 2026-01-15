@@ -289,6 +289,20 @@ export default function CPFPage() {
             Seus dados estão protegidos
           </p>
         </div>
+
+        {/* Build Info - Ambiente de Testes */}
+        {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA && (
+          <div className="fixed bottom-0 left-0 right-0 bg-gray-900/90 text-white text-[10px] px-2 py-1">
+            <div className="flex justify-between items-center">
+              <span className="font-mono">
+                {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7)}
+              </span>
+              <span className="truncate max-w-[200px]">
+                {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_MESSAGE || 'N/A'}
+              </span>
+            </div>
+          </div>
+        )}
       </main>
     </MobileOnly>
   )

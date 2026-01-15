@@ -37,18 +37,24 @@ export interface DeviceInfo {
 }
 
 export interface RendaInfo {
-  plataforma: 'uber' | '99'
+  plataforma: 'uber' | '99' | 'ifood'
   dados_uber?: {
     ativo: boolean
-    corridas_mes: number
-    faturamento_medio: number
-    avaliacao: number
+    corridas_mes?: number
+    faturamento_medio?: number
+    avaliacao?: number
   }
   dados_99?: {
     ativo: boolean
-    corridas_mes: number
-    faturamento_medio: number
-    avaliacao: number
+    corridas_mes?: number
+    faturamento_medio?: number
+    avaliacao?: number
+  }
+  dados_ifood?: {
+    ativo: boolean
+    entregas_mes?: number
+    faturamento_medio?: number
+    avaliacao?: number
   }
   score?: number
 }
