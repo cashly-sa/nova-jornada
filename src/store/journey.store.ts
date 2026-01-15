@@ -11,6 +11,7 @@ interface JourneyState {
   leadId: number | null
   leadData: LeadData | null
   isNewLead: boolean
+  leadToken: string | null // Token do lead para RPA Cashly Connect
 
   // Dados da jornada
   journeyId: number | null
@@ -37,6 +38,7 @@ interface JourneyState {
   setRendaInfo: (info: RendaInfo) => void
   setKnoxImei: (imei: string) => void
   setContratoId: (id: string) => void
+  setLeadToken: (token: string) => void
   reset: () => void
   clearForNewOtp: () => void // Limpa apenas flags de OTP mantendo journeyId
 }
@@ -46,6 +48,7 @@ const initialState = {
   leadId: null,
   leadData: null,
   isNewLead: false,
+  leadToken: null,
   journeyId: null,
   token: null,
   currentStep: '00' as JourneyStep,
@@ -93,6 +96,8 @@ export const useJourneyStore = create<JourneyState>()(
 
       setContratoId: (id) => set({ contratoId: id }),
 
+      setLeadToken: (token) => set({ leadToken: token }),
+
       reset: () => set(initialState),
 
       clearForNewOtp: () => set({
@@ -108,6 +113,7 @@ export const useJourneyStore = create<JourneyState>()(
         cpf: state.cpf,
         leadId: state.leadId,
         leadData: state.leadData,
+        leadToken: state.leadToken,
         journeyId: state.journeyId,
         token: state.token,
         currentStep: state.currentStep,

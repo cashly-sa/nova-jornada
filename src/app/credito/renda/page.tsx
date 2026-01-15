@@ -13,8 +13,8 @@ import { useVisibilityTracker } from '@/hooks/useVisibilityTracker'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
 import { usePreventBackNavigation } from '@/hooks/usePreventBackNavigation'
 import { STEP_NAMES } from '@/types/journey.types'
-import { PalencaModal } from '@/components/PalencaModal'
-import { PalencaSuccessData, PalencaError } from '@/types/palenca.types'
+import { CashlyConnectModal } from '@/components/CashlyConnectModal'
+import { getLeadToken, checkRendaApproval } from '@/lib/supabase'
 
 // Logo Uber (ícone quadrado oficial)
 function UberLogo({ inverted = false }: { inverted?: boolean }) {
@@ -64,6 +64,28 @@ function Logo99({ inverted = false }: { inverted?: boolean }) {
   )
 }
 
+// Logo iFood
+function IFoodLogo({ inverted = false }: { inverted?: boolean }) {
+  const bgColor = inverted ? '#fff' : '#EA1D2C'
+  const textColor = inverted ? '#EA1D2C' : '#fff'
+  return (
+    <svg viewBox="0 0 100 100" className="w-16 h-16">
+      <rect x="5" y="5" width="90" height="90" rx="18" fill={bgColor}/>
+      <text
+        x="50"
+        y="62"
+        textAnchor="middle"
+        fontSize="28"
+        fontWeight="bold"
+        fontFamily="system-ui, sans-serif"
+        fill={textColor}
+      >
+        iFood
+      </text>
+    </svg>
+  )
+}
+
 export default function RendaPage() {
   return (
     <SessionGuard requiredStep="03">
@@ -74,17 +96,17 @@ export default function RendaPage() {
 
 function RendaPageContent() {
   const router = useRouter()
-  const { journeyId, deviceInfo, setRendaInfo, setStep } = useJourneyStore()
+  const { journeyId, deviceInfo, setRendaInfo, setStep, leadId, leadToken, setLeadToken } = useJourneyStore()
 
-  const [plataforma, setPlataforma] = useState<'uber' | '99' | ''>('')
+  const [plataforma, setPlataforma] = useState<'uber' | '99' | 'ifood' | ''>('')
   const [isLoading, setIsLoading] = useState(false)
-  const [status, setStatus] = useState<'form' | 'processing' | 'done' | 'error'>('form')
+  const [status, setStatus] = useState<'form' | 'processing' | 'waiting_approval' | 'done' | 'error'>('form')
   const [error, setError] = useState('')
   const [isCompleted, setIsCompleted] = useState(false)
 
-  // Estados para Palenca
-  const [showPalenca, setShowPalenca] = useState(false)
-  const [selectedPlatform, setSelectedPlatform] = useState<'uber' | '99' | null>(null)
+  // Estados para Cashly Connect
+  const [showConnect, setShowConnect] = useState(false)
+  const [selectedPlatform, setSelectedPlatform] = useState<'uber' | '99' | 'ifood' | null>(null)
 
   // Hooks de tracking
   const { logEvent, trackClick, trackStepCompleted } = useEventTracker(STEP_NAMES.RENDA)
@@ -93,98 +115,116 @@ function RendaPageContent() {
   useHeartbeat()
   usePreventBackNavigation()
 
-  // Abre modal da Palenca ao selecionar plataforma
-  const handleSelect = (selected: 'uber' | '99') => {
-    trackClick(`select_${selected}`, selected === 'uber' ? 'Uber' : '99')
+  // Buscar leadToken ao montar
+  useEffect(() => {
+    async function fetchLeadToken() {
+      if (!leadToken && leadId) {
+        const token = await getLeadToken(leadId)
+        if (token) {
+          setLeadToken(token)
+        }
+      }
+    }
+    fetchLeadToken()
+  }, [leadId, leadToken, setLeadToken])
+
+  // Função de polling para aguardar aprovação
+  const startApprovalPolling = () => {
+    const maxAttempts = 60 // 5 minutos (5s * 60)
+    let attempts = 0
+
+    const pollInterval = setInterval(async () => {
+      attempts++
+
+      try {
+        const { approved, platform } = await checkRendaApproval(journeyId!)
+
+        if (approved) {
+          clearInterval(pollInterval)
+          setStatus('done')
+
+          // Salvar info de renda
+          const rendaInfo = {
+            plataforma: platform!,
+            dados_uber: platform === 'uber' ? { ativo: true } : undefined,
+            dados_99: platform === '99' ? { ativo: true } : undefined,
+            dados_ifood: platform === 'ifood' ? { ativo: true } : undefined,
+            score: 750,
+          }
+          setRendaInfo(rendaInfo)
+
+          logEvent('renda_approved', { platform })
+          trackStepCompleted()
+
+          // Atualizar step no banco
+          try {
+            await fetch('/api/journey/step', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ journeyId, step: '04' }),
+            })
+          } catch (err) {
+            console.error('Erro ao atualizar step:', err)
+          }
+
+          // Ir para oferta
+          setTimeout(() => {
+            setIsCompleted(true)
+            setStep('04')
+            router.replace('/credito/oferta')
+          }, 1500)
+        } else if (attempts >= maxAttempts) {
+          clearInterval(pollInterval)
+          setError('Tempo esgotado aguardando aprovação. Tente novamente.')
+          setStatus('error')
+          logEvent('renda_timeout', { attempts })
+        }
+      } catch (err) {
+        console.error('Erro no polling:', err)
+      }
+    }, 5000) // A cada 5 segundos
+  }
+
+  // Abre modal do Cashly Connect ao selecionar plataforma
+  const handleSelect = (selected: 'uber' | '99' | 'ifood') => {
+    if (!leadToken) {
+      setError('Token do lead não encontrado. Recarregue a página.')
+      setStatus('error')
+      return
+    }
+
+    trackClick(`select_${selected}`, selected === 'uber' ? 'Uber' : selected === '99' ? '99' : 'iFood')
     logEvent('platform_selected', { platform: selected })
 
     setSelectedPlatform(selected)
     setPlataforma(selected)
-    setShowPalenca(true)
-    logEvent('palenca_opened', { platform: selected })
+    setShowConnect(true)
+    logEvent('cashly_connect_opened', { platform: selected })
   }
 
-  // Callback de sucesso da Palenca
-  const handlePalencaSuccess = async (data: PalencaSuccessData) => {
-    console.log('[Renda] Palenca success:', data)
-    setShowPalenca(false)
-    setStatus('processing')
-    setIsLoading(true)
-
-    try {
-      // Dados de renda baseados na Palenca
-      const rendaInfo = {
-        plataforma: selectedPlatform || 'uber',
-        dados_uber: selectedPlatform === 'uber' ? {
-          ativo: true,
-          corridas_mes: 0, // Sera preenchido via API Palenca
-          faturamento_medio: 0,
-          avaliacao: 0,
-        } : undefined,
-        dados_99: selectedPlatform === '99' ? {
-          ativo: true,
-          corridas_mes: 0,
-          faturamento_medio: 0,
-          avaliacao: 0,
-        } : undefined,
-        score: 750, // Score padrao inicial
-        palenca_user_id: data.userId,
-        palenca_account_id: data.accountId,
-      }
-
-      setRendaInfo(rendaInfo)
-      setStatus('done')
-
-      logEvent('renda_validated', {
-        platform: selectedPlatform,
-        palencaUserId: data.userId,
-        palencaAccountId: data.accountId,
-      })
-      trackStepCompleted()
-
-      // Atualizar step no banco
-      try {
-        await fetch('/api/journey/step', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            journeyId,
-            step: '04',
-          }),
-        })
-      } catch (err) {
-        console.error('Erro ao atualizar step:', err)
-      }
-
-      // Ir para oferta apos breve delay
-      setTimeout(() => {
-        setIsCompleted(true)
-        setStep('04')
-        router.replace('/credito/oferta')
-      }, 1500)
-    } catch (err) {
-      console.error('Erro ao processar dados Palenca:', err)
-      setError('Erro ao processar dados. Tente novamente.')
-      setStatus('error')
-    } finally {
-      setIsLoading(false)
-    }
+  // Callback de sucesso do CashlyConnect - inicia polling
+  const handleConnectSuccess = () => {
+    console.log('[Renda] CashlyConnect success, iniciando polling')
+    setShowConnect(false)
+    setStatus('waiting_approval')
+    logEvent('cashly_connect_success', { platform: selectedPlatform })
+    startApprovalPolling()
   }
 
-  // Callback de erro da Palenca
-  const handlePalencaError = (error: PalencaError) => {
-    console.error('[Renda] Palenca error:', error)
-    setShowPalenca(false)
-    setError(error.message || 'Erro na verificacao. Tente novamente.')
+  // Callback ao fechar modal do CashlyConnect
+  const handleConnectClose = () => {
+    setShowConnect(false)
+    logEvent('cashly_connect_closed', { platform: selectedPlatform })
+    // Não muda status, permite usuario tentar novamente
+  }
+
+  // Callback de erro do CashlyConnect
+  const handleConnectError = (message: string) => {
+    console.error('[Renda] CashlyConnect error:', message)
+    setShowConnect(false)
+    setError(message || 'Erro na verificação. Tente novamente.')
     setStatus('error')
-    logEvent('palenca_error', { code: error.code, message: error.message })
-  }
-
-  // Callback ao fechar modal da Palenca
-  const handlePalencaClose = () => {
-    setShowPalenca(false)
-    logEvent('palenca_closed', { platform: selectedPlatform })
-    // Nao muda status, permite usuario tentar novamente
+    logEvent('cashly_connect_error', { message })
   }
 
   const handleRetry = () => {
@@ -195,15 +235,17 @@ function RendaPageContent() {
 
   return (
     <>
-      {/* Modal Palenca - Fullscreen */}
-      <PalencaModal
-        isOpen={showPalenca}
-        onClose={handlePalencaClose}
-        onSuccess={handlePalencaSuccess}
-        onError={handlePalencaError}
-        platform={selectedPlatform || 'uber'}
-        journeyId={journeyId || 0}
-      />
+      {/* Modal CashlyConnect - Fullscreen */}
+      {leadToken && (
+        <CashlyConnectModal
+          isOpen={showConnect}
+          onClose={handleConnectClose}
+          onSuccess={handleConnectSuccess}
+          onError={handleConnectError}
+          platform={selectedPlatform || 'uber'}
+          leadToken={leadToken}
+        />
+      )}
 
       <MobileOnly>
         <main className="min-h-screen bg-background flex flex-col">
@@ -223,29 +265,29 @@ function RendaPageContent() {
             <div className="card animate-slide-up">
               <h1 className="page-title text-center">Validação de renda</h1>
               <p className="page-subtitle text-center">
-                Nessa etapa vamos avaliar seus ganhos na Uber e 99.
+                Nessa etapa vamos avaliar seus ganhos na Uber, 99 e iFood.
                 <br />
                 <strong>Escolha a plataforma com mais ganhos.</strong>
               </p>
 
               {/* Botões de seleção */}
-              <div className="grid grid-cols-2 gap-4 mt-8">
+              <div className="grid grid-cols-3 gap-3 mt-8">
                 {/* Botão Uber */}
                 <button
                   onClick={() => handleSelect('uber')}
                   disabled={isLoading}
                   className={`
-                    flex flex-col items-center justify-center p-6 rounded-2xl border-2
+                    flex flex-col items-center justify-center p-4 rounded-2xl border-2
                     transition-all duration-300 transform hover:scale-105 active:scale-95
                     ${plataforma === 'uber'
                       ? 'border-black bg-black text-white shadow-lg'
                       : 'border-gray-200 bg-white hover:border-gray-400 hover:shadow-md'}
                   `}
                 >
-                  <div className="w-20 h-20 mb-3 flex items-center justify-center">
+                  <div className="w-16 h-16 mb-2 flex items-center justify-center">
                     <UberLogo inverted={plataforma === 'uber'} />
                   </div>
-                  <span className={`text-xl font-bold ${plataforma === 'uber' ? 'text-white' : 'text-black'}`}>
+                  <span className={`text-lg font-bold ${plataforma === 'uber' ? 'text-white' : 'text-black'}`}>
                     Uber
                   </span>
                 </button>
@@ -255,18 +297,38 @@ function RendaPageContent() {
                   onClick={() => handleSelect('99')}
                   disabled={isLoading}
                   className={`
-                    flex flex-col items-center justify-center p-6 rounded-2xl border-2
+                    flex flex-col items-center justify-center p-4 rounded-2xl border-2
                     transition-all duration-300 transform hover:scale-105 active:scale-95
                     ${plataforma === '99'
                       ? 'border-[#ff8200] bg-gradient-to-br from-[#fd0] to-[#ff8200] text-black shadow-lg'
                       : 'border-gray-200 bg-white hover:border-[#ff8200] hover:shadow-md'}
                   `}
                 >
-                  <div className="w-20 h-20 mb-3 flex items-center justify-center">
+                  <div className="w-16 h-16 mb-2 flex items-center justify-center">
                     <Logo99 inverted={plataforma === '99'} />
                   </div>
-                  <span className="text-xl font-bold text-black">
+                  <span className="text-lg font-bold text-black">
                     99
+                  </span>
+                </button>
+
+                {/* Botão iFood */}
+                <button
+                  onClick={() => handleSelect('ifood')}
+                  disabled={isLoading}
+                  className={`
+                    flex flex-col items-center justify-center p-4 rounded-2xl border-2
+                    transition-all duration-300 transform hover:scale-105 active:scale-95
+                    ${plataforma === 'ifood'
+                      ? 'border-[#EA1D2C] bg-[#EA1D2C] text-white shadow-lg'
+                      : 'border-gray-200 bg-white hover:border-[#EA1D2C] hover:shadow-md'}
+                  `}
+                >
+                  <div className="w-16 h-16 mb-2 flex items-center justify-center">
+                    <IFoodLogo inverted={plataforma === 'ifood'} />
+                  </div>
+                  <span className={`text-lg font-bold ${plataforma === 'ifood' ? 'text-white' : 'text-[#EA1D2C]'}`}>
+                    iFood
                   </span>
                 </button>
               </div>
@@ -287,7 +349,21 @@ function RendaPageContent() {
               </div>
               <h1 className="page-title">Validando sua renda</h1>
               <p className="text-text-secondary">
-                Consultando dados na {plataforma === 'uber' ? 'Uber' : '99'}...
+                Consultando dados na {plataforma === 'uber' ? 'Uber' : plataforma === '99' ? '99' : 'iFood'}...
+              </p>
+            </div>
+          )}
+
+          {status === 'waiting_approval' && (
+            <div className="card animate-fade-in text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                <svg className="w-10 h-10 text-primary animate-pulse" fill="none" viewBox="0 0 24 24">
+                  <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h1 className="page-title">Aguardando aprovação</h1>
+              <p className="text-text-secondary">
+                Seus dados estão sendo analisados...
               </p>
             </div>
           )}

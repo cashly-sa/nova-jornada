@@ -17,7 +17,7 @@ export default function OTPPage() {
   const hydrated = useHydration()
   const { journeyId, leadData, setOtpVerified, setStep } = useJourneyStore()
 
-  const [code, setCode] = useState(['', '', '', '', '', ''])
+  const [code, setCode] = useState(['', '', '', ''])
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSending, setIsSending] = useState(false)
@@ -59,41 +59,8 @@ export default function OTPPage() {
     }
   }, [countdown, canResend])
 
-  // WebOTP API - Auto-preenchimento de SMS
-  useEffect(() => {
-    // Verificar se WebOTP é suportado
-    if (!('OTPCredential' in window)) {
-      console.log('WebOTP API não suportada neste navegador')
-      return
-    }
-
-    const abortController = new AbortController()
-
-    // Solicitar OTP do navegador
-    navigator.credentials.get({
-      // @ts-expect-error - WebOTP types not in standard lib
-      otp: { transport: ['sms'] },
-      signal: abortController.signal,
-    })
-      .then((credential) => {
-        const otpCredential = credential as unknown as { code?: string } | null
-        if (otpCredential?.code) {
-          const otpCode = otpCredential.code
-          const digits = otpCode.split('')
-          setCode(digits)
-          // Auto-verificar
-          verifyOTP(otpCode)
-        }
-      })
-      .catch((err: Error) => {
-        // Ignorar erros de abort (usuário cancelou ou componente desmontou)
-        if (err.name !== 'AbortError') {
-          console.log('WebOTP:', err.message)
-        }
-      })
-
-    return () => abortController.abort()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // WebOTP não funciona com WhatsApp, removido
+  // O usuário receberá o código via WhatsApp e digitará manualmente
 
   const sendOTP = async () => {
     if (!journeyId || !leadData?.telefone) return
@@ -142,12 +109,12 @@ export default function OTPPage() {
     setError('')
 
     // Auto-focus próximo input
-    if (value && index < 5) {
+    if (value && index < 3) {
       inputRefs.current[index + 1]?.focus()
     }
 
     // Auto-submit quando completo
-    if (newCode.every(d => d !== '') && newCode.join('').length === 6) {
+    if (newCode.every(d => d !== '') && newCode.join('').length === 4) {
       verifyOTP(newCode.join(''))
     }
   }
@@ -160,9 +127,9 @@ export default function OTPPage() {
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault()
-    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4)
 
-    if (pastedData.length === 6) {
+    if (pastedData.length === 4) {
       const newCode = pastedData.split('')
       setCode(newCode)
       verifyOTP(pastedData)
@@ -189,7 +156,7 @@ export default function OTPPage() {
 
       if (!response.ok) {
         setError(data.error || 'Código inválido')
-        setCode(['', '', '', '', '', ''])
+        setCode(['', '', '', ''])
         inputRefs.current[0]?.focus()
         return
       }
@@ -254,15 +221,15 @@ export default function OTPPage() {
           <div className="card animate-slide-up">
             <h1 className="page-title text-center">Verificação</h1>
             <p className="page-subtitle text-center">
-              Digite o código enviado para
+              Digite o código enviado via WhatsApp para
               <br />
               <span className="font-medium text-text-primary">
                 {maskPhone(leadData.telefone)}
               </span>
             </p>
 
-            {/* Inputs OTP */}
-            <div className="flex justify-center gap-2 my-8" onPaste={handlePaste}>
+            {/* Inputs OTP - 4 dígitos */}
+            <div className="flex justify-center gap-3 my-8" onPaste={handlePaste}>
               {code.map((digit, index) => (
                 <input
                   key={index}
@@ -276,7 +243,7 @@ export default function OTPPage() {
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   disabled={isLoading}
                   className={`
-                    w-12 h-14 text-center text-2xl font-bold
+                    w-14 h-16 text-center text-3xl font-bold
                     border-2 rounded-xl
                     transition-all duration-200
                     focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20
@@ -330,7 +297,7 @@ export default function OTPPage() {
         {/* Footer */}
         <div className="py-4 text-center">
           <p className="text-xs text-text-secondary">
-            Não recebeu? Verifique sua caixa de SMS
+            Não recebeu? Verifique seu WhatsApp
           </p>
         </div>
       </main>

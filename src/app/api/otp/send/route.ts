@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { sendSMS, generateOTPCode, hashOTPCode } from '@/lib/clicksend'
+import { sendWhatsAppOTP, generateOTPCode, hashOTPCode } from '@/lib/callbell'
 import { STEP_NAMES } from '@/types/journey.types'
 
 export async function POST(request: NextRequest) {
@@ -90,14 +90,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Enviar SMS com formato WebOTP para auto-preenchimento
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4500'
-    const origin = new URL(appUrl).hostname
-    const message = `Cashly: Seu codigo de verificacao e ${code}. Valido por 20 minutos.\n\n@${origin} #${code}`
-    const smsResult = await sendSMS({ to: phone, message })
+    // Enviar OTP via WhatsApp (Callbell)
+    const whatsappResult = await sendWhatsAppOTP({ to: phone, code })
 
-    if (!smsResult.success) {
-      console.error('Erro ao enviar SMS:', smsResult.error)
+    if (!whatsappResult.success) {
+      console.error('Erro ao enviar WhatsApp:', whatsappResult.error)
       // Em desenvolvimento, logar o código para testes
       if (process.env.NODE_ENV === 'development') {
         console.log('🔐 Código OTP (dev):', code)
@@ -111,7 +108,7 @@ export async function POST(request: NextRequest) {
         device_modelo_id: journeyId,
         event_type: 'otp_sent',
         step_name: STEP_NAMES.OTP,
-        metadata: { success: smsResult.success },
+        metadata: { success: whatsappResult.success, channel: 'whatsapp' },
       })
 
     return NextResponse.json({

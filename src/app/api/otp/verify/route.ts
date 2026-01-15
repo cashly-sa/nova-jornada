@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase, logJourneyEvent } from '@/lib/supabase'
-import { hashOTPCode } from '@/lib/clicksend'
+import { hashOTPCode } from '@/lib/callbell'
 import { STEP_NAMES } from '@/types/journey.types'
 
 /**

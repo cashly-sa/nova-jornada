@@ -258,3 +258,47 @@ export async function checkDeviceEligibility(modelo: string, fabricante?: string
 
   return { eligible: false }
 }
+
+// Buscar token do lead pelo ID (usado para RPA Cashly Connect)
+export async function getLeadToken(leadId: number): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('lead')
+    .select('token')
+    .eq('id', leadId)
+    .single()
+
+  if (error) {
+    console.error('Erro ao buscar lead token:', error)
+    return null
+  }
+  return data?.token || null
+}
+
+// Verificar aprovação de renda (uber, 99_taxi ou ifood = true)
+export async function checkRendaApproval(journeyId: number): Promise<{
+  approved: boolean
+  platform: 'uber' | '99' | 'ifood' | null
+}> {
+  const { data, error } = await supabase
+    .from('device_modelo')
+    .select('uber, "99_taxi", ifood')
+    .eq('id', journeyId)
+    .single()
+
+  if (error) {
+    console.error('Erro ao verificar aprovação de renda:', error)
+    return { approved: false, platform: null }
+  }
+
+  if (data?.uber === true) {
+    return { approved: true, platform: 'uber' }
+  }
+  if (data?.['99_taxi'] === true) {
+    return { approved: true, platform: '99' }
+  }
+  if (data?.ifood === true) {
+    return { approved: true, platform: 'ifood' }
+  }
+
+  return { approved: false, platform: null }
+}
