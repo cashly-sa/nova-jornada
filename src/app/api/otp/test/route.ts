@@ -49,14 +49,15 @@ export async function POST(request: NextRequest) {
     }
     formattedNumber = `+${formattedNumber}`
 
+    // Mensagem de texto com o código OTP
+    const message = `*Cashly* - Seu código de verificação é: *1234*\n\nEste código expira em 20 minutos.\nNão compartilhe este código com ninguém.`
+
     // Payload que será enviado
     const payload = {
       to: formattedNumber,
       from: 'whatsapp',
-      type: 'template',
-      template_uuid: templateUuid,
-      template_values: ['1234', '1234'],
-      optin_contact: true,
+      type: 'text',
+      content: message,
     }
 
     console.log('📤 Enviando para Callbell:', JSON.stringify(payload, null, 2))

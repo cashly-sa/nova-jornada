@@ -37,6 +37,9 @@ export async function sendWhatsAppOTP({ to, code }: SendWhatsAppOTPParams): Prom
   formattedNumber = `+${formattedNumber}`
 
   try {
+    // Mensagem de texto com o código OTP
+    const message = `*Cashly* - Seu código de verificação é: *${code}*\n\nEste código expira em 20 minutos.\nNão compartilhe este código com ninguém.`
+
     const response = await fetch(CALLBELL_API_URL, {
       method: 'POST',
       headers: {
@@ -46,10 +49,8 @@ export async function sendWhatsAppOTP({ to, code }: SendWhatsAppOTPParams): Prom
       body: JSON.stringify({
         to: formattedNumber,
         from: 'whatsapp',
-        type: 'template',
-        template_uuid: process.env.CALLBELL_TEMPLATE_UUID || 'baf67ac52ac442a394a34db8c469723d',
-        template_values: [code, code],
-        optin_contact: true,
+        type: 'text',
+        content: message,
       })
     })
 

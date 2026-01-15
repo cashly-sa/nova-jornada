@@ -38,7 +38,15 @@
       "Bash(vercel env:*)",
       "Bash(vercel ls:*)",
       "Bash(vercel inspect:*)",
-      "Bash(npx vercel:*)"
+      "Bash(npx vercel:*)",
+      "Bash(vercel logs:*)",
+      "Bash(vercel --prod --yes --force:*)",
+      "Bash(vercel --prod --force --yes:*)",
+      "Bash(vercel redeploy:*)",
+      "Bash(vercel whoami:*)",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "Bash(vercel --prod --yes --env FIFTY_ONE_DEGREES_KEY=AQSxfgpJ21OWdCNT3kg --env CALLBELL_API_KEY=pBrcWF4J6vvJUCN5dC59A2xxFcMzC2vs.b8c471af3218ef43536735ebaa22c9f691074f89aaafd4934794a9c067a492fd --env CALLBELL_TEMPLATE_UUID=baf67ac52ac442a394a34db8c469723d)"
     ]
   }
 }
