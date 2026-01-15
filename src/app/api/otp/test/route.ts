@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       request: {
         url: CALLBELL_API_URL,
         phone_formatted: formattedNumber,
-        template_uuid: templateUuid,
+        channel_uuid: channelUuid || 'NOT SET',
       },
       response: data,
     })
