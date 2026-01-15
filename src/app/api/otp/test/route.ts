@@ -6,17 +6,16 @@ const CALLBELL_API_URL = 'https://api.callbell.eu/v1/messages/send'
 // GET: Verificar configuração das variáveis de ambiente
 export async function GET() {
   const apiKey = process.env.CALLBELL_API_KEY
-  const channelUuid = process.env.CALLBELL_CHANNEL_UUID
+  const templateUuid = process.env.CALLBELL_TEMPLATE_UUID
 
   return NextResponse.json({
     status: 'ok',
     env_check: {
       CALLBELL_API_KEY: apiKey ? `${apiKey.slice(0, 10)}...${apiKey.slice(-4)}` : 'NOT SET',
-      CALLBELL_CHANNEL_UUID: channelUuid || 'NOT SET (required for sending)',
+      CALLBELL_TEMPLATE_UUID: templateUuid || 'baf67ac52ac442a394a34db8c469723d (default)',
       NODE_ENV: process.env.NODE_ENV || 'unknown',
     },
     api_configured: !!apiKey,
-    channel_configured: !!channelUuid,
   })
 }
 
@@ -33,7 +32,7 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = process.env.CALLBELL_API_KEY
-    const channelUuid = process.env.CALLBELL_CHANNEL_UUID
+    const templateUuid = process.env.CALLBELL_TEMPLATE_UUID || 'baf67ac52ac442a394a34db8c469723d'
 
     if (!apiKey) {
       return NextResponse.json({
@@ -50,19 +49,19 @@ export async function POST(request: NextRequest) {
     }
     formattedNumber = `+${formattedNumber}`
 
-    // Mensagem de texto com o código OTP
-    const message = `*Cashly* - Seu código de verificação é: *1234*\n\nEste código expira em 20 minutos.\nNão compartilhe este código com ninguém.`
+    const testCode = '1234'
 
-    // Payload que será enviado (formato correto da API Callbell)
-    const payload: Record<string, unknown> = {
+    // Payload exato do app que funciona
+    const payload = {
       to: formattedNumber,
       from: 'whatsapp',
       type: 'text',
-      content: { text: message },
-    }
-
-    if (channelUuid) {
-      payload.channel_uuid = channelUuid
+      content: {
+        text: testCode,
+      },
+      template_uuid: templateUuid,
+      template_values: [testCode, testCode], // {{1}} no texto e {{1}} na URL
+      optin_contact: true,
     }
 
     console.log('📤 Enviando para Callbell:', JSON.stringify(payload, null, 2))
@@ -93,7 +92,7 @@ export async function POST(request: NextRequest) {
       request: {
         url: CALLBELL_API_URL,
         phone_formatted: formattedNumber,
-        channel_uuid: channelUuid || 'NOT SET',
+        template_uuid: templateUuid,
       },
       response: data,
     })
