@@ -6,16 +6,17 @@ const CALLBELL_API_URL = 'https://api.callbell.eu/v1/messages/send'
 // GET: Verificar configuração das variáveis de ambiente
 export async function GET() {
   const apiKey = process.env.CALLBELL_API_KEY
-  const templateUuid = process.env.CALLBELL_TEMPLATE_UUID
+  const channelUuid = process.env.CALLBELL_CHANNEL_UUID
 
   return NextResponse.json({
     status: 'ok',
     env_check: {
       CALLBELL_API_KEY: apiKey ? `${apiKey.slice(0, 10)}...${apiKey.slice(-4)}` : 'NOT SET',
-      CALLBELL_TEMPLATE_UUID: templateUuid || 'NOT SET (using default: baf67ac52ac442a394a34db8c469723d)',
+      CALLBELL_CHANNEL_UUID: channelUuid || 'NOT SET (required for sending)',
       NODE_ENV: process.env.NODE_ENV || 'unknown',
     },
     api_configured: !!apiKey,
+    channel_configured: !!channelUuid,
   })
 }
 
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = process.env.CALLBELL_API_KEY
-    const templateUuid = process.env.CALLBELL_TEMPLATE_UUID || 'baf67ac52ac442a394a34db8c469723d'
+    const channelUuid = process.env.CALLBELL_CHANNEL_UUID
 
     if (!apiKey) {
       return NextResponse.json({
@@ -52,12 +53,16 @@ export async function POST(request: NextRequest) {
     // Mensagem de texto com o código OTP
     const message = `*Cashly* - Seu código de verificação é: *1234*\n\nEste código expira em 20 minutos.\nNão compartilhe este código com ninguém.`
 
-    // Payload que será enviado
-    const payload = {
+    // Payload que será enviado (formato correto da API Callbell)
+    const payload: Record<string, unknown> = {
       to: formattedNumber,
       from: 'whatsapp',
       type: 'text',
-      content: message,
+      content: { text: message },
+    }
+
+    if (channelUuid) {
+      payload.channel_uuid = channelUuid
     }
 
     console.log('📤 Enviando para Callbell:', JSON.stringify(payload, null, 2))

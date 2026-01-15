@@ -292,14 +292,19 @@ export default function CPFPage() {
 
         {/* Build Info - Ambiente de Testes */}
         {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA && (
-          <div className="fixed bottom-0 left-0 right-0 bg-gray-900/90 text-white text-[10px] px-2 py-1">
-            <div className="flex justify-between items-center">
-              <span className="font-mono">
-                {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7)}
-              </span>
-              <span className="truncate max-w-[200px]">
-                {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_MESSAGE || 'N/A'}
-              </span>
+          <div className="fixed bottom-0 left-0 right-0 bg-yellow-500 text-black px-3 py-2 shadow-lg">
+            <div className="text-center">
+              <div className="text-[11px] font-bold uppercase tracking-wide mb-1">
+                Ambiente de Testes
+              </div>
+              <div className="flex items-center justify-center gap-2 text-xs">
+                <span className="font-mono bg-black/20 px-2 py-0.5 rounded">
+                  {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 7)}
+                </span>
+                <span className="font-medium truncate max-w-[250px]">
+                  {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_MESSAGE || 'N/A'}
+                </span>
+              </div>
             </div>
           </div>
         )}
